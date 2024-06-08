@@ -21,7 +21,15 @@ def smiles_validation(smiles: str, print_log: bool=True, get_unvalidate_smiles: 
     #     return unvalidate_smiles, validate_smiles
     # else:
     #     return validate_smiles
-    if Chem.MolFromSmiles(smiles) is not None:
-        return smiles
-    else:
-        return 1
+    if Chem.MolFromSmiles(smiles) is None:
+        smiles = int(1)
+    return smiles
+
+
+def count_for_failed_smiles(smiles: pd.Series) -> int:
+    failed_smiles_number = 0
+    for compound in smiles:
+        if compound == 1:
+            failed_smiles_number += 1
+    return failed_smiles_number
+

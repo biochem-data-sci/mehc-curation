@@ -2,22 +2,51 @@ import pandas as pd
 import numpy as np
 from parallel_pandas import ParallelPandas
 from rdkit import Chem
+from rdkit.Chem.SaltRemover import SaltRemover
+from .utils import *
 
-def remove_mixtures(smiles):
-    # Check if a input is a mixture or not
-    # If a input is a mixture --> Return 1
-    if smiles.find('.') != -1:
-        if smiles.find('.[') == -1:
-            smiles = int(1)
-        else:
-            if smiles.count('.') != smiles.count('.['):
-                smiles = int(1)
-    return smiles
 
-def remove_inorganic_compound(smiles):
+def clean_salts(smiles, return_difference: bool = False):
+    remover = SaltRemover()
     mol = Chem.MolFromSmiles(smiles)
-    # Check for the absence of carbon atoms
-    has_carbon = any(atom.GetSymbol() == 'C' for atom in mol.GetAtoms())
-    if has_carbon is not True:
-        smiles = 1
-    return smiles
+    post_mol = remover.StripMol(mol)
+    post_smiles = Chem.MolToSmiles(post_mol)
+    if smiles == post_smiles:
+        difference = False
+    else:
+        difference = True
+    if return_difference:
+        return post_smiles, difference
+    else:
+        return post_smiles
+
+
+def neutralize(smiles, return_difference: bool = False):
+    mol = Chem.MolFromSmiles(smiles)
+    post_mol = neutralize_atoms(mol)
+    post_smiles = Chem.MolToSmiles(post_mol)
+    if smiles == post_smiles:
+        difference = False
+    else:
+        difference = True
+    if return_difference:
+        return post_smiles, difference
+    else:
+        return post_smiles
+
+
+def clean_salts_and_neutralize_smiles_data(smiles: pd.DataFrame, print_logs: bool = True):
+    salts_cleaned = smiles['compound'].p_apply(lambda x: clean_salts(x, return_difference=True))
+    post_salts_clean_smiles_data = salts_cleaned.apply(lambda x: x[0])
+    differ_after_clean_salt = salts_cleaned.apply(lambda x: x[1])
+
+    neutralized = post_salts_clean_smiles_data.p_apply(lambda x: neutralize(x, return_difference=True))
+    post_neutralized_smiles_data = neutralized.apply(lambda x: x[0])
+    differ_after_neutralize = neutralized.apply(lambda x: x[1])
+
+    if print_logs:
+        print(f'Pre-cleaned smiles data: {len(smiles)}')
+        print(f'Number of salts were cleaned: {sum(differ_after_clean_salt)}')
+        print(f'Number of substances were neutralized: {sum(differ_after_neutralize)}')
+        print(f'Post-cleaned smiles data: {len(post_neutralized_smiles_data)}')
+    return post_neutralized_smiles_data

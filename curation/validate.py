@@ -4,7 +4,7 @@ import os
 from parallel_pandas import ParallelPandas
 from rdkit import Chem
 
-from .utils import *
+from curation.utils import *
 
 
 class RemoveSpecificSMILES:
@@ -49,7 +49,7 @@ class RemoveSpecificSMILES:
 
 def remove_mixtures(smiles_df: pd.DataFrame,
                     check_validity: bool = True,
-                    reports_dir_path: str = None,
+                    report_dir_path: str = None,
                     get_invalid_smiles: bool = False,
                     print_logs: bool = False,
                     get_report_text_file: bool = False):
@@ -73,7 +73,7 @@ def remove_mixtures(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(valid_smiles,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='remove_mixtures',
                    report_file_name='remove_mixtures.txt',
                    csv_file_name='non_mixture_smiles.csv',
@@ -88,7 +88,7 @@ def remove_mixtures(smiles_df: pd.DataFrame,
 
 def remove_inorganic_compounds(smiles_df: pd.DataFrame,
                                check_validity: bool = True,
-                               reports_dir_path: str = None,
+                               report_dir_path: str = None,
                                get_invalid_smiles: bool = False,
                                print_logs: bool = False,
                                get_report_text_file: bool = False):
@@ -112,7 +112,7 @@ def remove_inorganic_compounds(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(valid_smiles,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='remove_inorganic_compounds',
                    report_file_name='remove_inorganic_compounds.txt',
                    csv_file_name='organic_compounds.csv',
@@ -127,7 +127,7 @@ def remove_inorganic_compounds(smiles_df: pd.DataFrame,
 
 def remove_organometallic_compounds(smiles_df: pd.DataFrame,
                                     check_validity: bool = True,
-                                    reports_dir_path: str = None,
+                                    report_dir_path: str = None,
                                     get_invalid_smiles: bool = False,
                                     print_logs: bool = False,
                                     get_report_text_file: bool = False):
@@ -151,7 +151,7 @@ def remove_organometallic_compounds(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(valid_smiles,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='remove_organometallic_compounds',
                    report_file_name='remove_organometallic_compounds.txt',
                    csv_file_name='organic_compounds.csv',
@@ -166,7 +166,7 @@ def remove_organometallic_compounds(smiles_df: pd.DataFrame,
 
 def completely_validate_smiles(smiles_df: pd.DataFrame,
                                check_validity: bool = True,
-                               reports_dir_path: str = None,
+                               report_dir_path: str = None,
                                print_logs: bool = True,
                                get_report_text_file: bool = False):
     invalid_smiles_df = pd.DataFrame()
@@ -192,7 +192,7 @@ def completely_validate_smiles(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(smiles_df_after_removing_organometallic_compounds,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='completely_validate_smiles',
                    report_file_name='completely_validate_smiles.txt',
                    csv_file_name='output_smiles.csv',

@@ -138,16 +138,25 @@ def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
                                       .p_apply(lambda x: tuple(x.index)))
                                      .reset_index(name='index'))
 
-    post_removed_duplicates_smiles = smiles_df.drop_duplicates()
+    post_duplicates_removed_smiles = smiles_df.drop_duplicates()
 
-    contents = (f'Number of input SMILES strings: {len(smiles_df)}'
-                f'Number of unique SMILES strings: {len(post_removed_duplicates_smiles)}'
-                f'Number of duplicate SMILES strings: {len(smiles_df) - len(post_removed_duplicates_smiles)}')
+    contents = (f'Number of input SMILES strings: {len(smiles_df)}\n'
+                f'Number of unique SMILES strings: {len(post_duplicates_removed_smiles)}\n'
+                f'Number of duplicate SMILES strings: {len(smiles_df) - len(post_duplicates_removed_smiles)}\n')
 
     if print_logs:
         print(contents)
 
+    if get_report_text_file:
+        (GetReport(post_duplicates_removed_smiles,
+                   report_dir_path=report_dir_path,
+                   report_subdir_name='remove_duplicates',
+                   report_file_name='remove_duplicates_report.txt',
+                   csv_file_name='post_duplicates_removed.csv',
+                   content=contents)
+         .create_report_and_csv_files())
+
     if show_duplicated_smiles_and_index:
-        return duplicated_smiles_include_idx, post_removed_duplicates_smiles
+        return duplicated_smiles_include_idx, post_duplicates_removed_smiles
     else:
-        return post_removed_duplicates_smiles
+        return post_duplicates_removed_smiles

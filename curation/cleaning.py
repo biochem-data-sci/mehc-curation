@@ -4,7 +4,7 @@ import os
 from parallel_pandas import ParallelPandas
 from rdkit import Chem
 from rdkit.Chem.SaltRemover import SaltRemover
-from .utils import *
+from curation.utils import *
 
 
 class CleaningSalts:
@@ -60,7 +60,7 @@ class Neutralizing:
 
 def clean_salts_smiles_data(smiles_df: pd.DataFrame,
                             check_validity: bool = True,
-                            reports_dir_path: str = None,
+                            report_dir_path: str = None,
                             print_logs: bool = True,
                             get_report_text_files: bool = False,
                             get_difference: bool = False):
@@ -96,7 +96,7 @@ def clean_salts_smiles_data(smiles_df: pd.DataFrame,
 
     if get_report_text_files:
         (GetReport(post_drop_missing_smiles_string,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='cleaning_salts',
                    report_file_name='cleaning_salts_report.txt',
                    csv_file_name='post_cleaned_salts.csv',
@@ -111,7 +111,7 @@ def clean_salts_smiles_data(smiles_df: pd.DataFrame,
 
 def neutralizing_smiles_data(smiles_df: pd.DataFrame,
                              check_validity: bool = True,
-                             reports_dir_path: str = None,
+                             report_dir_path: str = None,
                              print_logs: bool = True,
                              get_report_text_files: bool = False,
                              get_difference: bool = False):
@@ -139,7 +139,7 @@ def neutralizing_smiles_data(smiles_df: pd.DataFrame,
 
     if get_report_text_files:
         (GetReport(post_neutralized_smiles_data,
-                   reports_dir_path,
+                   report_dir_path,
                    report_subdir_name='neutralizing_smiles',
                    report_file_name='neutralizing_smiles_report.txt',
                    csv_file_name='post_neutralized_smiles.csv',
@@ -154,7 +154,7 @@ def neutralizing_smiles_data(smiles_df: pd.DataFrame,
 
 def clean_salts_and_neutralize_smiles_data(smiles_df: pd.DataFrame,
                                            check_validity: bool = True,
-                                           reports_dir_path: str = None,
+                                           report_dir_path: str = None,
                                            print_logs: bool = True,
                                            get_report_text_file: bool = False):
     if check_validity:
@@ -179,11 +179,12 @@ def clean_salts_and_neutralize_smiles_data(smiles_df: pd.DataFrame,
         print(contents)
 
     if get_report_text_file:
-        GetReport(post_neutralized_smiles_data,
-                  reports_dir_path,
-                  report_subdir_name='cleaning_salts_and_neutralizing_smiles',
-                  report_file_name='cleaning_salts_and_neutralizing_smiles_report.txt',
-                  csv_file_name='post_cleaned_and_neutralized_smiles.csv',
-                  content=contents)
+        (GetReport(post_neutralized_smiles_data,
+                   report_dir_path,
+                   report_subdir_name='cleaning_salts_and_neutralizing_smiles',
+                   report_file_name='cleaning_salts_and_neutralizing_smiles_report.txt',
+                   csv_file_name='post_cleaned_and_neutralized_smiles.csv',
+                   content=contents)
+         .create_report_and_csv_files())
 
     return post_neutralized_smiles_data

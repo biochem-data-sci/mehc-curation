@@ -7,7 +7,7 @@ from rdkit import Chem
 from .utils import *
 
 
-class IsMixture:
+class RemoveSpecificSMILES:
     def __init__(self, smiles):
         self.smiles = smiles
 
@@ -20,11 +20,6 @@ class IsMixture:
                     return False
         return True
 
-
-class IsInorganicCompound:
-    def __init__(self, smiles):
-        self.smiles = smiles
-
     def is_inorganic(self):
         mol = Chem.MolFromSmiles(self.smiles)
         # Check for the absence of carbon atoms
@@ -32,11 +27,6 @@ class IsInorganicCompound:
         if has_carbon is not True:
             return False
         return True
-
-
-class IsOrganometallicCompound:
-    def __init__(self, smiles):
-        self.smiles = smiles
 
     def is_organometallic(self):
         mol = Chem.MolFromSmiles(self.smiles)
@@ -61,12 +51,12 @@ def remove_mixtures(smiles_df: pd.DataFrame,
                     check_validity: bool = True,
                     reports_dir_path: str = None,
                     get_invalid_smiles: bool = False,
-                    print_log: bool = False,
+                    print_logs: bool = False,
                     get_report_text_file: bool = False):
     if check_validity:
         smiles_df = check_valid_smiles_in_dataframe(smiles_df)
 
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: IsMixture(x).is_mixture())
+    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_mixture())
     valid_smiles = smiles_df[smiles_df['is_valid'] == True]
     valid_smiles.drop(columns=['is_valid'], inplace=True)
     invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
@@ -78,7 +68,7 @@ def remove_mixtures(smiles_df: pd.DataFrame,
         contents += f'List of mixture SMILES: \n'
         contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
 
-    if print_log:
+    if print_logs:
         print(contents)
 
     if get_report_text_file:
@@ -100,12 +90,12 @@ def remove_inorganic_compounds(smiles_df: pd.DataFrame,
                                check_validity: bool = True,
                                reports_dir_path: str = None,
                                get_invalid_smiles: bool = False,
-                               print_log: bool = False,
+                               print_logs: bool = False,
                                get_report_text_file: bool = False):
     if check_validity:
         smiles_df = check_valid_smiles_in_dataframe(smiles_df)
 
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: IsInorganicCompound(x).is_inorganic())
+    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_inorganic())
     valid_smiles = smiles_df[smiles_df['is_valid'] == True]
     valid_smiles.drop(columns=['is_valid'], inplace=True)
     invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
@@ -117,7 +107,7 @@ def remove_inorganic_compounds(smiles_df: pd.DataFrame,
         contents += f'List of inorganic compounds: \n'
         contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
 
-    if print_log:
+    if print_logs:
         print(contents)
 
     if get_report_text_file:
@@ -139,12 +129,12 @@ def remove_organometallic_compounds(smiles_df: pd.DataFrame,
                                     check_validity: bool = True,
                                     reports_dir_path: str = None,
                                     get_invalid_smiles: bool = False,
-                                    print_log: bool = False,
+                                    print_logs: bool = False,
                                     get_report_text_file: bool = False):
     if check_validity:
         smiles_df = check_valid_smiles_in_dataframe(smiles_df)
 
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: IsOrganometallicCompound(x).is_organometallic())
+    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_organometallic())
     valid_smiles = smiles_df[smiles_df['is_valid'] == True]
     valid_smiles.drop(columns=['is_valid'], inplace=True)
     invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
@@ -156,7 +146,7 @@ def remove_organometallic_compounds(smiles_df: pd.DataFrame,
         contents += f'List of organometallic compounds: \n'
         contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
 
-    if print_log:
+    if print_logs:
         print(contents)
 
     if get_report_text_file:
@@ -177,7 +167,7 @@ def remove_organometallic_compounds(smiles_df: pd.DataFrame,
 def completely_validate_smiles(smiles_df: pd.DataFrame,
                                check_validity: bool = True,
                                reports_dir_path: str = None,
-                               print_log: bool = True,
+                               print_logs: bool = True,
                                get_report_text_file: bool = False):
     invalid_smiles_df = pd.DataFrame()
     if check_validity:
@@ -197,7 +187,7 @@ def completely_validate_smiles(smiles_df: pd.DataFrame,
                 f'Number of invalid SMILES: {number_of_failed_smiles}\n'
                 f'Number of valid SMILES: {len(smiles_df_after_removing_organometallic_compounds)}\n')
 
-    if print_log:
+    if print_logs:
         print(contents)
 
     if get_report_text_file:

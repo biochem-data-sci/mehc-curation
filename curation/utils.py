@@ -56,16 +56,16 @@ def get_report(file_path: str, content: str):
 
 def check_valid_smiles_in_dataframe(smiles_df: pd.DataFrame,
                                     reports_dir_path: str = None,
-                                    print_log: bool = False,
+                                    print_logs: bool = False,
                                     get_report_text_file: bool = False,
                                     get_invalid_smiles: bool = False,
                                     get_isomeric_smiles: bool = False):
     """
-    Function to validate smiles against a dataframe
+    Function to validate smiles_df against a dataframe
     :param reports_dir_path:
     :param get_report_text_file:
     :param smiles_df: Input dataframe that contains SMILES strings
-    :param print_log: Default is False. Print log information
+    :param print_logs: Default is False. Print log information
     :param get_invalid_smiles: Default is False. Get invalid SMILES strings
     :param get_isomeric_smiles: Default is False. Get isomeric SMILES strings
     :return:
@@ -90,7 +90,7 @@ def check_valid_smiles_in_dataframe(smiles_df: pd.DataFrame,
     if len(invalid_smiles) > 0:
         contents += f'List of invalid SMILES: \n{invalid_smiles.tolist()}'
 
-    if print_log:
+    if print_logs:
         print(contents)
 
     if get_report_text_file:
@@ -123,21 +123,29 @@ def neutralize_atoms(mol):
     return mol
 
 
-def remove_duplicates_in_dataframe(smiles: pd.DataFrame,
-                                   print_log: bool = True,
+def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
+                                   check_validity: bool = True,
+                                   report_dir_path: str = None,
+                                   print_logs: bool = True,
+                                   get_report_text_file: bool = False,
                                    show_duplicated_smiles_and_index: bool = True):
-    duplicated_smiles = smiles[smiles.duplicated(keep=False)]
+    if check_validity:
+        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
+
+    duplicated_smiles = smiles_df[smiles_df.duplicated(keep=False)]
     duplicated_smiles_include_idx = (((duplicated_smiles
                                        .groupby(duplicated_smiles.columns.tolist()))
                                       .p_apply(lambda x: tuple(x.index)))
                                      .reset_index(name='index'))
 
-    post_removed_duplicates_smiles = smiles.drop_duplicates()
+    post_removed_duplicates_smiles = smiles_df.drop_duplicates()
 
-    if print_log:
-        print(f'Number of input SMILES strings: {len(smiles)}')
-        print(f'Number of unique SMILES strings: {len(post_removed_duplicates_smiles)}')
-        print(f'Number of duplicate SMILES strings: {len(smiles) - len(post_removed_duplicates_smiles)}')
+    contents = (f'Number of input SMILES strings: {len(smiles_df)}'
+                f'Number of unique SMILES strings: {len(post_removed_duplicates_smiles)}'
+                f'Number of duplicate SMILES strings: {len(smiles_df) - len(post_removed_duplicates_smiles)}')
+
+    if print_logs:
+        print(contents)
 
     if show_duplicated_smiles_and_index:
         return duplicated_smiles_include_idx, post_removed_duplicates_smiles

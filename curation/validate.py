@@ -1,202 +1,283 @@
 import pandas as pd
-import numpy as np
-import os
 from parallel_pandas import ParallelPandas
 from rdkit import Chem
-
-from curation.utils import *
-
-
-class RemoveSpecificSMILES:
-    def __init__(self, smiles):
-        self.smiles = smiles
-
-    def is_mixture(self):
-        if self.smiles.find('.') != -1:
-            if self.smiles.find('.[') == -1:
-                return False
-            else:
-                if self.smiles.count('.') != self.smiles.count('.['):
-                    return False
-        return True
-
-    def is_inorganic(self):
-        mol = Chem.MolFromSmiles(self.smiles)
-        # Check for the absence of carbon atoms
-        has_carbon = any(atom.GetSymbol() == 'C' for atom in mol.GetAtoms())
-        if has_carbon is not True:
-            return False
-        return True
-
-    def is_organometallic(self):
-        mol = Chem.MolFromSmiles(self.smiles)
-        metals = ["Li", "Be", "Na", "Mg", "Al", "K", "Ca", "Sc", "Ti", "V", "Cr",
-                  "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Rb", "Sr", "Y", "Zr",
-                  "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb",
-                  "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb",
-                  "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os",
-                  "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Fr", "Ra",
-                  "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es",
-                  "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
-                  "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"]
-        for atom in mol.GetAtoms():
-            if atom.GetSymbol() in metals:
-                for neighbor in atom.GetNeighbors():
-                    if neighbor.GetSymbol() == "C" or neighbor.GetSymbol() == "c":
-                        return False
-        return True
+from curation.utils import GetReport, RemoveSpecificSMILES
 
 
-def remove_mixtures(smiles_df: pd.DataFrame,
-                    check_validity: bool = True,
-                    report_dir_path: str = None,
-                    get_invalid_smiles: bool = False,
-                    print_logs: bool = False,
-                    get_report_text_file: bool = False):
-    if check_validity:
-        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
+class ValidationStage:
+    def __init__(self, smiles_df: pd.DataFrame):
+        self.smiles_df = smiles_df
 
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_mixture())
-    valid_smiles = smiles_df[smiles_df['is_valid'] == True]
-    valid_smiles.drop(columns=['is_valid'], inplace=True)
-    invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
+    def check_valid_smiles(self,
+                           output_dir_path: str = None,
+                           print_logs: bool = False,
+                           get_report: bool = False,
+                           get_csv: bool = True,
+                           get_invalid_smile_indexes: bool = False,
+                           get_isomeric_smiles: bool = False,
+                           return_contents: bool = False):
+        self.smiles_df['is_valid'] = self.smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_valid())
+        valid_smiles = self.smiles_df[self.smiles_df['is_valid'] == True].copy()
+        valid_smiles.drop(columns=['is_valid'], inplace=True)
+        invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False]['compound']
+        index_of_invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False].index.tolist()
 
-    contents = (f'Number of input SMILES: {len(smiles_df)}\n'
-                f'Number of non-mixture SMILES: {len(valid_smiles)}\n'
-                f'Number of mixture SMILES: {len(invalid_smiles)}\n')
-    if len(invalid_smiles) > 0:
-        contents += f'List of mixture SMILES: \n'
-        contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
+        if get_isomeric_smiles:
+            valid_smiles['compound'] = valid_smiles['compound'].p_apply(
+                lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x)))
+        else:
+            valid_smiles['compound'] = valid_smiles['compound'].p_apply(
+                lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x), isomericSmiles=False))
 
-    if print_logs:
-        print(contents)
+        contents = (f'Number of input SMILES: {len(self.smiles_df)}\n'
+                    f'Number of valid SMILES: {len(valid_smiles)}\n'
+                    f'Number of invalid SMILES: {len(invalid_smiles)}\n')
+        if len(invalid_smiles) > 0:
+            contents += f'List of invalid SMILES indexes: \n{index_of_invalid_smiles}\n'
+            contents += '\n'.join(f'{i}. {smiles}' for i, smiles in zip(index_of_invalid_smiles, invalid_smiles))
+            contents += '\n'
 
-    if get_report_text_file:
-        (GetReport(valid_smiles,
-                   report_dir_path,
-                   report_subdir_name='remove_mixtures',
-                   report_file_name='remove_mixtures.txt',
-                   csv_file_name='non_mixture_smiles.csv',
-                   content=contents)
-         .create_report_and_csv_files())
+        if print_logs:
+            print(contents)
 
-    if get_invalid_smiles:
-        return valid_smiles, invalid_smiles
-    else:
-        return valid_smiles
+        if get_csv:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='check_valid_smiles')
+             .create_csv_file(csv_file_name='valid_smiles.csv'))
 
+        if get_report:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='check_valid_smiles')
+             .create_report_file(report_file_name='validate_smiles_data_report.txt',
+                                 content=contents))
 
-def remove_inorganic_compounds(smiles_df: pd.DataFrame,
+        if get_invalid_smile_indexes and return_contents:
+            return valid_smiles, index_of_invalid_smiles, contents
+        elif get_invalid_smile_indexes and not return_contents:
+            return valid_smiles, index_of_invalid_smiles
+        elif not get_invalid_smile_indexes and not return_contents:
+            return valid_smiles
+
+    def remove_mixtures(self,
+                        check_validity: bool = True,
+                        output_dir_path: str = None,
+                        get_invalid_smile_indexes: bool = False,
+                        print_logs: bool = False,
+                        get_report: bool = False,
+                        get_csv: bool = True,
+                        return_contents: bool = False):
+        if check_validity:
+            self.smiles_df = self.check_valid_smiles(get_csv=False)
+
+        self.smiles_df['is_valid'] = self.smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_mixture())
+        valid_smiles = self.smiles_df[self.smiles_df['is_valid'] == True].copy()
+        valid_smiles.drop(columns=['is_valid'], inplace=True)
+        invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False]['compound']
+        index_of_invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False].index.tolist()
+
+        contents = (f'Number of input SMILES: {len(self.smiles_df)}\n'
+                    f'Number of non-mixture SMILES: {len(valid_smiles)}\n'
+                    f'Number of mixture SMILES: {len(invalid_smiles)}\n')
+        if len(invalid_smiles) > 0:
+            contents += f'List of mixture indexes: \n{index_of_invalid_smiles}\n'
+            contents += '\n'.join(f'{i}. {smiles}' for i, smiles in zip(index_of_invalid_smiles, invalid_smiles))
+            contents += '\n'
+
+        if print_logs:
+            print(contents)
+
+        if get_csv:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_mixtures')
+             .create_csv_file(csv_file_name='non_mixture_smiles.csv'))
+
+        if get_report:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_mixtures')
+             .create_report_file(report_file_name='remove_mixtures.txt',
+                                 content=contents))
+
+        if get_invalid_smile_indexes and return_contents:
+            return valid_smiles, index_of_invalid_smiles, contents
+        elif get_invalid_smile_indexes and not return_contents:
+            return valid_smiles, index_of_invalid_smiles
+        elif not get_invalid_smile_indexes and not return_contents:
+            return valid_smiles
+
+    def remove_inorganic_compounds(self,
+                                   check_validity: bool = True,
+                                   output_dir_path: str = None,
+                                   get_invalid_smile_indexes: bool = False,
+                                   print_logs: bool = False,
+                                   get_report: bool = False,
+                                   get_csv: bool = True,
+                                   return_contents: bool = False):
+        if check_validity:
+            self.smiles_df = self.check_valid_smiles(get_csv=False)
+
+        self.smiles_df['is_valid'] = self.smiles_df['compound'].p_apply(
+            lambda x: RemoveSpecificSMILES(x).is_inorganic())
+        valid_smiles = self.smiles_df[self.smiles_df['is_valid'] == True].copy()
+        valid_smiles.drop(columns=['is_valid'], inplace=True)
+        invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False]['compound']
+        index_of_invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False].index.tolist()
+
+        contents = (f'Number of input SMILES: {len(self.smiles_df)}\n'
+                    f'Number of organic compounds: {len(valid_smiles)}\n'
+                    f'Number of inorganic compounds: {len(invalid_smiles)}\n')
+        if len(invalid_smiles) > 0:
+            contents += f'List of inorganic indexes: \n{index_of_invalid_smiles}\n'
+            contents += '\n'.join(f'{i}. {smiles}' for i, smiles in zip(index_of_invalid_smiles, invalid_smiles))
+            contents += '\n'
+
+        if print_logs:
+            print(contents)
+
+        if get_csv:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_inorganic_compounds')
+             .create_csv_file(csv_file_name='organic_compounds.csv'))
+
+        if get_report:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_inorganic_compounds')
+             .create_report_file(report_file_name='remove_inorganic_compounds.txt',
+                                 content=contents))
+
+        if get_invalid_smile_indexes and return_contents:
+            return valid_smiles, index_of_invalid_smiles, contents
+        elif get_invalid_smile_indexes and not return_contents:
+            return valid_smiles, index_of_invalid_smiles
+        elif not get_invalid_smile_indexes and not return_contents:
+            return valid_smiles
+
+    def remove_organometallic_compounds(self,
+                                        check_validity: bool = True,
+                                        output_dir_path: str = None,
+                                        get_invalid_smile_indexes: bool = False,
+                                        print_logs: bool = False,
+                                        get_report: bool = False,
+                                        get_csv: bool = True,
+                                        return_contents: bool = False):
+        if check_validity:
+            self.smiles_df = self.check_valid_smiles(get_csv=False)
+
+        self.smiles_df['is_valid'] = self.smiles_df['compound'].p_apply(
+            lambda x: RemoveSpecificSMILES(x).is_organometallic())
+        valid_smiles = self.smiles_df[self.smiles_df['is_valid'] == True].copy()
+        valid_smiles.drop(columns=['is_valid'], inplace=True)
+        invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False]['compound']
+        index_of_invalid_smiles = self.smiles_df[self.smiles_df['is_valid'] == False].index.tolist()
+
+        contents = (f'Number of input SMILES: {len(self.smiles_df)}\n'
+                    f'Number of organic compounds: {len(valid_smiles)}\n'
+                    f'Number of organometallic compounds: {len(invalid_smiles)}\n')
+        if len(invalid_smiles) > 0:
+            contents += f'List of organometallic indexes: \n{index_of_invalid_smiles}\n'
+            contents += '\n'.join(f'{i}. {smiles}' for i, smiles in zip(index_of_invalid_smiles, invalid_smiles))
+            contents += '\n'
+
+        if print_logs:
+            print(contents)
+
+        if get_csv:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_organometallic_compounds')
+             .create_csv_file(csv_file_name='organic_compounds.csv'))
+
+        if get_report:
+            (GetReport(valid_smiles,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='remove_organometallic_compounds')
+             .create_report_file(report_file_name='remove_organometallic_compounds.txt',
+                                 content=contents))
+
+        if get_invalid_smile_indexes and return_contents:
+            return valid_smiles, index_of_invalid_smiles, contents
+        elif get_invalid_smile_indexes and not return_contents:
+            return valid_smiles, index_of_invalid_smiles
+        elif not get_invalid_smile_indexes and not return_contents:
+            return valid_smiles
+
+    def wholly_validate_smiles(self,
                                check_validity: bool = True,
-                               report_dir_path: str = None,
-                               get_invalid_smiles: bool = False,
-                               print_logs: bool = False,
-                               get_report_text_file: bool = False):
-    if check_validity:
-        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
-
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_inorganic())
-    valid_smiles = smiles_df[smiles_df['is_valid'] == True]
-    valid_smiles.drop(columns=['is_valid'], inplace=True)
-    invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
-
-    contents = (f'Number of input SMILES: {len(smiles_df)}\n'
-                f'Number of organic compounds: {len(valid_smiles)}\n'
-                f'Number of inorganic compounds: {len(invalid_smiles)}\n')
-    if len(invalid_smiles) > 0:
-        contents += f'List of inorganic compounds: \n'
-        contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
-
-    if print_logs:
-        print(contents)
-
-    if get_report_text_file:
-        (GetReport(valid_smiles,
-                   report_dir_path,
-                   report_subdir_name='remove_inorganic_compounds',
-                   report_file_name='remove_inorganic_compounds.txt',
-                   csv_file_name='organic_compounds.csv',
-                   content=contents)
-         .create_report_and_csv_files())
-
-    if get_invalid_smiles:
-        return valid_smiles, invalid_smiles
-    else:
-        return valid_smiles
-
-
-def remove_organometallic_compounds(smiles_df: pd.DataFrame,
-                                    check_validity: bool = True,
-                                    report_dir_path: str = None,
-                                    get_invalid_smiles: bool = False,
-                                    print_logs: bool = False,
-                                    get_report_text_file: bool = False):
-    if check_validity:
-        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
-
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: RemoveSpecificSMILES(x).is_organometallic())
-    valid_smiles = smiles_df[smiles_df['is_valid'] == True]
-    valid_smiles.drop(columns=['is_valid'], inplace=True)
-    invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
-
-    contents = (f'Number of input SMILES: {len(smiles_df)}\n'
-                f'Number of organic compounds: {len(valid_smiles)}\n'
-                f'Number of organometallic compounds: {len(invalid_smiles)}\n')
-    if len(invalid_smiles) > 0:
-        contents += f'List of organometallic compounds: \n'
-        contents += '\n'.join(f"{i + 1}. {smiles}" for i, smiles in enumerate(invalid_smiles.tolist()))
-
-    if print_logs:
-        print(contents)
-
-    if get_report_text_file:
-        (GetReport(valid_smiles,
-                   report_dir_path,
-                   report_subdir_name='remove_organometallic_compounds',
-                   report_file_name='remove_organometallic_compounds.txt',
-                   csv_file_name='organic_compounds.csv',
-                   content=contents)
-         .create_report_and_csv_files())
-
-    if get_invalid_smiles:
-        return valid_smiles, invalid_smiles
-    else:
-        return valid_smiles
-
-
-def completely_validate_smiles(smiles_df: pd.DataFrame,
-                               check_validity: bool = True,
-                               report_dir_path: str = None,
+                               output_dir_path: str = None,
                                print_logs: bool = True,
-                               get_report_text_file: bool = False):
-    invalid_smiles_df = pd.DataFrame()
-    if check_validity:
-        smiles_df, invalid_smiles_df = check_valid_smiles_in_dataframe(smiles_df, get_invalid_smiles=True)
+                               get_report: bool = False,
+                               get_csv: bool = True):
+        invalid_smiles_indexes = []
+        validation_step_contents = ''
+        smiles_count_before = len(self.smiles_df)
 
-    smiles_df_after_removing_mixture, mixture_smiles_df = remove_mixtures(smiles_df,
-                                                                          check_validity=False,
-                                                                          get_invalid_smiles=True)
-    smiles_df_after_removing_inorganic_compounds, inorganic_smiles_df = remove_inorganic_compounds(
-        smiles_df_after_removing_mixture, check_validity=False, get_invalid_smiles=True)
-    smiles_df_after_removing_organometallic_compounds, organometallic_smiles_df = remove_organometallic_compounds(
-        smiles_df_after_removing_inorganic_compounds, check_validity=False, get_invalid_smiles=True)
-    number_of_failed_smiles = len(invalid_smiles_df) + len(mixture_smiles_df) + len(inorganic_smiles_df) + len(
-        organometallic_smiles_df)
+        if check_validity:
+            self.smiles_df, invalid_smiles_indexes, validation_step_contents = self.check_valid_smiles(
+                get_invalid_smile_indexes=True,
+                get_csv=False,
+                return_contents=True)
 
-    contents = (f'Number of input SMILES: {len(smiles_df)}\n'
-                f'Number of invalid SMILES: {number_of_failed_smiles}\n'
-                f'Number of valid SMILES: {len(smiles_df_after_removing_organometallic_compounds)}\n')
+        self.smiles_df, mixture_smiles_indexes, remove_mixtures_contents = self.remove_mixtures(check_validity=False,
+                                                                                                get_invalid_smile_indexes=True,
+                                                                                                get_csv=False,
+                                                                                                return_contents=True)
+        self.smiles_df, inorganic_smiles_indexes, remove_inorganics_contents = self.remove_inorganic_compounds(
+            check_validity=False,
+            get_invalid_smile_indexes=True,
+            get_csv=False,
+            return_contents=True)
+        self.smiles_df, organometallic_smiles_indexes, remove_organometallics_contents = self.remove_organometallic_compounds(
+            check_validity=False,
+            get_invalid_smile_indexes=True,
+            get_csv=False,
+            return_contents=True)
 
-    if print_logs:
-        print(contents)
+        failed_smiles_indexes = invalid_smiles_indexes + mixture_smiles_indexes + inorganic_smiles_indexes + organometallic_smiles_indexes
+        number_of_failed_smiles = len(failed_smiles_indexes)
 
-    if get_report_text_file:
-        (GetReport(smiles_df_after_removing_organometallic_compounds,
-                   report_dir_path,
-                   report_subdir_name='completely_validate_smiles',
-                   report_file_name='completely_validate_smiles.txt',
-                   csv_file_name='output_smiles.csv',
-                   content=contents)
-         .create_report_and_csv_files())
+        overview_contents = (f'Number of input SMILES: {smiles_count_before}\n'
+                             f'Number of invalid SMILES: {number_of_failed_smiles}\n'
+                             f'Number of valid SMILES: {len(self.smiles_df)}\n')
+        if number_of_failed_smiles > 0:
+            overview_contents += f'List of invalid SMILES indexes: \n{failed_smiles_indexes}\n'
 
-    return smiles_df_after_removing_organometallic_compounds
+        contents = "\n".join([
+            "VALIDATION STEP:",
+            validation_step_contents,
+            "----------",
+            "MIXTURES REMOVING STEP:",
+            remove_mixtures_contents,
+            "----------",
+            "INORGANICS REMOVING STEP:",
+            remove_inorganics_contents,
+            "----------",
+            "ORGANOMETALLIC REMOVING STEP:",
+            remove_organometallics_contents,
+            "----------",
+            "VALIDATE COMPLETE!",
+            "SUMMARY:",
+            overview_contents
+        ])
+
+        if print_logs:
+            print(contents)
+
+        if get_csv:
+            (GetReport(self.smiles_df,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='wholly_validate_smiles')
+             .create_csv_file(csv_file_name='output_smiles.csv'))
+
+        if get_report:
+            (GetReport(self.smiles_df,
+                       output_dir_path=output_dir_path,
+                       report_subdir_name='wholly_validate_smiles')
+             .create_report_file(report_file_name='wholly_validate_smiles.txt',
+                                 content=contents))
+
+        return self.smiles_df

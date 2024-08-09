@@ -5,12 +5,39 @@ from parallel_pandas import ParallelPandas
 from rdkit import Chem
 from .validate import *
 
-current_dir = os.getcwd()
-parent_dir = os.path.dirname(current_dir)
+
+class GetReport:
+    def __init__(self,
+                 smiles_df: pd.DataFrame,
+                 output_dir_path: str,
+                 report_subdir_name: str):
+        self.smiles_df = smiles_df
+        self.output_dir_path = output_dir_path
+        self.report_subdir_name = report_subdir_name
+
+    def create_report_file(self,
+                           report_file_name: str,
+                           content: str):
+        validate_smiles_dir = os.path.join(self.output_dir_path, self.report_subdir_name)
+        if not os.path.exists(validate_smiles_dir):
+            os.makedirs(validate_smiles_dir)
+
+        report_file_path = os.path.join(validate_smiles_dir, report_file_name)
+        with open(report_file_path, 'w') as report_file:
+            report_file.write(content)
+
+    def create_csv_file(self,
+                        csv_file_name: str):
+        validate_smiles_dir = os.path.join(self.output_dir_path, self.report_subdir_name)
+        if not os.path.exists(validate_smiles_dir):
+            os.makedirs(validate_smiles_dir)
+
+        csv_file_path = os.path.join(validate_smiles_dir, csv_file_name)
+        self.smiles_df.to_csv(csv_file_path, index=False, encoding='utf-8')
 
 
-class IsValidSMILES:
-    def __init__(self, smiles):
+class RemoveSpecificSMILES:
+    def __init__(self, smiles: str):
         self.smiles = smiles
 
     def is_valid(self):
@@ -20,92 +47,40 @@ class IsValidSMILES:
         except Exception as e:
             return False
 
+    def is_mixture(self):
+        if self.smiles.find('.') != -1:
+            if self.smiles.find('.[') == -1:
+                return False
+            else:
+                if self.smiles.count('.') != self.smiles.count('.['):
+                    return False
+        return True
 
-class GetReport:
-    def __init__(self,
-                 smiles_df: pd.DataFrame,
-                 report_dir_path: str,
-                 report_subdir_name: str,
-                 report_file_name: str,
-                 csv_file_name: str,
-                 content: str):
-        self.smiles_df = smiles_df
-        self.report_dir_path = report_dir_path
-        self.report_subdir_name = report_subdir_name
-        self.report_file_name = report_file_name
-        self.csv_file_name = csv_file_name
-        self.content = content
+    def is_inorganic(self):
+        mol = Chem.MolFromSmiles(self.smiles)
+        # Check for the absence of carbon atoms
+        has_carbon = any(atom.GetSymbol() == 'C' for atom in mol.GetAtoms())
+        if has_carbon is not True:
+            return False
+        return True
 
-    def create_report_and_csv_files(self):
-        validate_smiles_dir = os.path.join(self.report_dir_path, self.report_subdir_name)
-        if not os.path.exists(validate_smiles_dir):
-            os.makedirs(validate_smiles_dir)
-
-        report_file_path = os.path.join(validate_smiles_dir, self.report_file_name)
-        with open(report_file_path, 'w') as report_file:
-            report_file.write(self.content)
-
-        csv_file_path = os.path.join(validate_smiles_dir, self.csv_file_name)
-        self.smiles_df.to_csv(csv_file_path, index=False, encoding='utf-8')
-
-
-def get_report(file_path: str, content: str):
-    with open(file_path, 'w') as file:
-        file.write(content)
-
-
-def check_valid_smiles_in_dataframe(smiles_df: pd.DataFrame,
-                                    reports_dir_path: str = None,
-                                    print_logs: bool = False,
-                                    get_report_text_file: bool = False,
-                                    get_invalid_smiles: bool = False,
-                                    get_isomeric_smiles: bool = False):
-    """
-    Function to validate smiles_df against a dataframe
-    :param reports_dir_path:
-    :param get_report_text_file:
-    :param smiles_df: Input dataframe that contains SMILES strings
-    :param print_logs: Default is False. Print log information
-    :param get_invalid_smiles: Default is False. Get invalid SMILES strings
-    :param get_isomeric_smiles: Default is False. Get isomeric SMILES strings
-    :return:
-    """
-    smiles_df['is_valid'] = smiles_df['compound'].p_apply(lambda x: IsValidSMILES(x).is_valid())
-    valid_smiles = smiles_df[smiles_df['is_valid'] == True]
-    valid_smiles.drop(columns=['is_valid'], inplace=True)
-    invalid_smiles = smiles_df[smiles_df['is_valid'] == False]['compound']
-
-    if get_isomeric_smiles:
-        valid_smiles['compound'] = (valid_smiles['compound']
-                                    .p_apply(lambda x: Chem.MolFromSmiles(x))
-                                    .p_apply(lambda x: Chem.MolToSmiles(x)))
-    else:
-        valid_smiles['compound'] = (valid_smiles['compound']
-                                    .p_apply(lambda x: Chem.MolFromSmiles(x))
-                                    .p_apply(lambda x: Chem.MolToSmiles(x, isomericSmiles=False)))
-
-    contents = (f'Number of input SMILES: {len(smiles_df)}\n'
-                f'Number of valid SMILES: {len(valid_smiles)}\n'
-                f'Number of invalid SMILES: {len(invalid_smiles)}\n')
-    if len(invalid_smiles) > 0:
-        contents += f'List of invalid SMILES: \n{invalid_smiles.tolist()}'
-
-    if print_logs:
-        print(contents)
-
-    if get_report_text_file:
-        (GetReport(valid_smiles,
-                   report_dir_path=reports_dir_path,
-                   report_subdir_name='check_valid_smiles',
-                   report_file_name='validate_smiles_data_report.txt',
-                   csv_file_name='valid_smiles.csv',
-                   content=contents)
-         .create_report_and_csv_files())
-
-    if get_invalid_smiles:
-        return valid_smiles, invalid_smiles
-    else:
-        return valid_smiles
+    def is_organometallic(self):
+        mol = Chem.MolFromSmiles(self.smiles)
+        metals = ["Li", "Be", "Na", "Mg", "Al", "K", "Ca", "Sc", "Ti", "V", "Cr",
+                  "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Rb", "Sr", "Y", "Zr",
+                  "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb",
+                  "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb",
+                  "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os",
+                  "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Fr", "Ra",
+                  "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es",
+                  "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
+                  "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"]
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() in metals:
+                for neighbor in atom.GetNeighbors():
+                    if neighbor.GetSymbol() == "C" or neighbor.GetSymbol() == "c":
+                        return False
+        return True
 
 
 def neutralize_atoms(mol):
@@ -130,7 +105,7 @@ def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
                                    get_report_text_file: bool = False,
                                    show_duplicated_smiles_and_index: bool = True):
     if check_validity:
-        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
+        smiles_df = ValidationStage(smiles_df).check_valid_smiles()
 
     duplicated_smiles = smiles_df[smiles_df.duplicated(keep=False)]
     duplicated_smiles_include_idx = (((duplicated_smiles
@@ -149,7 +124,7 @@ def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(post_duplicates_removed_smiles,
-                   report_dir_path=report_dir_path,
+                   output_dir_path=report_dir_path,
                    report_subdir_name='remove_duplicates',
                    report_file_name='remove_duplicates_report.txt',
                    csv_file_name='post_duplicates_removed.csv',

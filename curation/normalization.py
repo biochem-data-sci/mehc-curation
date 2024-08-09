@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-import os
 from parallel_pandas import ParallelPandas
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -52,7 +50,7 @@ def normalize_tautomer_in_dataframe(smiles_df: pd.DataFrame,
     :return:
     """
     if check_validity:
-        smiles_df = check_valid_smiles_in_dataframe(smiles_df)
+        smiles_df = ValidationStage(smiles_df).check_valid_smiles()
 
     post_tautomer_normalized = smiles_df['compound'].p_apply(lambda x: NormalizeTautomer(x, return_difference=True)
                                                              .normalize_tautomer())
@@ -69,7 +67,7 @@ def normalize_tautomer_in_dataframe(smiles_df: pd.DataFrame,
 
     if get_report_text_file:
         (GetReport(post_tautomer_normalized_smiles_dataframe,
-                   report_dir_path=report_dir_path,
+                   output_dir_path=report_dir_path,
                    report_subdir_name='normalize_tautomers',
                    report_file_name='normalize_tautomers_report.txt',
                    csv_file_name='post_tautomers_normalized.csv',

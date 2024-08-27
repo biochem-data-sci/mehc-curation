@@ -3,6 +3,8 @@ from parallel_pandas import ParallelPandas
 from rdkit import Chem
 from curation.utils import GetReport, RemoveSpecificSMILES
 
+ParallelPandas.initialize(n_cpu=16, split_factor=4, disable_pr_bar=True)
+
 
 class ValidationStage:
     def __init__(self, smiles_df: pd.DataFrame):
@@ -57,6 +59,8 @@ class ValidationStage:
             return valid_smiles, index_of_invalid_smiles, contents
         elif get_invalid_smile_indexes and not return_contents:
             return valid_smiles, index_of_invalid_smiles
+        elif not get_invalid_smile_indexes and return_contents:
+            return valid_smiles, contents
         elif not get_invalid_smile_indexes and not return_contents:
             return valid_smiles
 
@@ -237,14 +241,15 @@ class ValidationStage:
             get_csv=False,
             return_contents=True)
 
-        failed_smiles_indexes = invalid_smiles_indexes + mixture_smiles_indexes + inorganic_smiles_indexes + organometallic_smiles_indexes
+        failed_smiles_indexes = (invalid_smiles_indexes + mixture_smiles_indexes
+                                 + inorganic_smiles_indexes + organometallic_smiles_indexes)
         number_of_failed_smiles = len(failed_smiles_indexes)
 
-        overview_contents = (f'Number of input SMILES: {smiles_count_before}\n'
-                             f'Number of invalid SMILES: {number_of_failed_smiles}\n'
-                             f'Number of valid SMILES: {len(self.smiles_df)}\n')
+        summary = (f'Number of input SMILES: {smiles_count_before}\n'
+                   f'Number of invalid SMILES: {number_of_failed_smiles}\n'
+                   f'Number of valid SMILES: {len(self.smiles_df)}\n')
         if number_of_failed_smiles > 0:
-            overview_contents += f'List of invalid SMILES indexes: \n{failed_smiles_indexes}\n'
+            summary += f'List of invalid SMILES indexes: \n{failed_smiles_indexes}\n'
 
         contents = "\n".join([
             "VALIDATION STEP:",
@@ -261,7 +266,7 @@ class ValidationStage:
             "----------",
             "VALIDATE COMPLETE!",
             "SUMMARY:",
-            overview_contents
+            summary
         ])
 
         if print_logs:

@@ -1,9 +1,11 @@
 import pandas as pd
-import numpy as np
 import os
 from parallel_pandas import ParallelPandas
+from rdkit.Chem.SaltRemover import SaltRemover
+from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import Chem
-from .validate import *
+
+ParallelPandas.initialize(n_cpu=16, split_factor=4, disable_pr_bar=True)
 
 
 class GetReport:
@@ -57,11 +59,21 @@ class RemoveSpecificSMILES:
         return True
 
     def is_inorganic(self):
+        # inorganic_patterns = [
+        #     Chem.MolFromSmarts("O=C=O"),  # Carbon dioxide
+        #     Chem.MolFromSmarts("C(=O)[O-]"),  # Carbonate ion
+        #     Chem.MolFromSmarts("C#N"),  # Cyanide ion
+        #     Chem.MolFromSmarts("[C]#[O]"),  # Carbon monoxide
+        #     Chem.MolFromSmarts("C(=O)[OH]"),  # Carboxyl group (inorganic context)
+        # ]
         mol = Chem.MolFromSmiles(self.smiles)
         # Check for the absence of carbon atoms
         has_carbon = any(atom.GetSymbol() == 'C' for atom in mol.GetAtoms())
         if has_carbon is not True:
             return False
+        # for pattern in inorganic_patterns:
+        #     if mol.HasSubstructMatch(pattern):
+        #         return False
         return True
 
     def is_organometallic(self):
@@ -83,6 +95,38 @@ class RemoveSpecificSMILES:
         return True
 
 
+class CleaningSMILES:
+    def __init__(self, smiles: str, return_difference: bool = False):
+        self.smiles = smiles
+        self.return_difference = return_difference
+
+    def cleaning_salts(self, return_is_null_smiles: bool = False):
+        remover = SaltRemover()
+        mol = Chem.MolFromSmiles(self.smiles)
+        post_mol = remover.StripMol(mol)
+        post_smiles = Chem.MolToSmiles(post_mol)
+        difference = self.smiles != post_smiles
+        is_null_smiles = post_smiles == ''
+        if self.return_difference and return_is_null_smiles:
+            return post_smiles, difference, is_null_smiles
+        elif self.return_difference and not return_is_null_smiles:
+            return post_smiles, difference
+        elif return_is_null_smiles and not self.return_difference:
+            return post_smiles, is_null_smiles
+        else:
+            return post_smiles
+
+    def neutralizing_salts(self):
+        mol = Chem.MolFromSmiles(self.smiles)
+        post_mol = neutralize_atoms(mol)
+        post_smiles = Chem.MolToSmiles(post_mol)
+        difference = self.smiles != post_smiles
+        if self.return_difference:
+            return post_smiles, difference
+        else:
+            return post_smiles
+
+
 def neutralize_atoms(mol):
     pattern = Chem.MolFromSmarts("[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
     at_matches = mol.GetSubstructMatches(pattern)
@@ -98,20 +142,23 @@ def neutralize_atoms(mol):
     return mol
 
 
-def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
-                                   check_validity: bool = True,
-                                   report_dir_path: str = None,
-                                   print_logs: bool = True,
-                                   get_report_text_file: bool = False,
-                                   show_duplicated_smiles_and_index: bool = True):
+def remove_duplicates(smiles_df: pd.DataFrame,
+                      check_validity: bool = True,
+                      output_dir_path: str = None,
+                      print_logs: bool = True,
+                      get_report: bool = False,
+                      get_csv: bool = True,
+                      show_duplicated_smiles_and_index: bool = True):
+    from curation.validate import ValidationStage
     if check_validity:
-        smiles_df = ValidationStage(smiles_df).check_valid_smiles()
+        smiles_df = ValidationStage(smiles_df).check_valid_smiles(get_csv=False)
 
     duplicated_smiles = smiles_df[smiles_df.duplicated(keep=False)]
     duplicated_smiles_include_idx = (((duplicated_smiles
-                                       .groupby(duplicated_smiles.columns.tolist()))
+                                       .groupby(duplicated_smiles.columns.tolist(), sort=False))
                                       .p_apply(lambda x: tuple(x.index)))
                                      .reset_index(name='index'))
+    post_smiles_df = smiles_df.merge(duplicated_smiles_include_idx, on='compound', how='left')
 
     post_duplicates_removed_smiles = smiles_df.drop_duplicates()
 
@@ -122,16 +169,24 @@ def remove_duplicates_in_dataframe(smiles_df: pd.DataFrame,
     if print_logs:
         print(contents)
 
-    if get_report_text_file:
+    if get_csv:
         (GetReport(post_duplicates_removed_smiles,
-                   output_dir_path=report_dir_path,
-                   report_subdir_name='remove_duplicates',
-                   report_file_name='remove_duplicates_report.txt',
-                   csv_file_name='post_duplicates_removed.csv',
-                   content=contents)
-         .create_report_and_csv_files())
+                   output_dir_path=output_dir_path,
+                   report_subdir_name='remove_duplicates')
+         .create_csv_file(csv_file_name='post_duplicates_removed.csv'))
+
+    if get_report:
+        (GetReport(post_duplicates_removed_smiles,
+                   output_dir_path=output_dir_path,
+                   report_subdir_name='remove_duplicates')
+         .create_report_file(report_file_name='remove_duplicates_report.txt',
+                             content=contents))
+        (GetReport(post_smiles_df,
+                   output_dir_path=output_dir_path,
+                   report_subdir_name='remove_duplicates')
+         .create_csv_file(csv_file_name='duplicated_smiles_include_idx.csv'))
 
     if show_duplicated_smiles_and_index:
-        return duplicated_smiles_include_idx, post_duplicates_removed_smiles
+        return post_duplicates_removed_smiles, post_smiles_df
     else:
         return post_duplicates_removed_smiles

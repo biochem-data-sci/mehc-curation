@@ -20,11 +20,14 @@ class NormalizeSMILES:
         # Create a molecule from the SMILES string
         mol = Chem.MolFromSmiles(self.smiles)
 
-        # Normalize tautomers
-        canonical_mol = rdMolStandardize.CanonicalTautomer(mol)
+        try:
+            # Normalize tautomers
+            canonical_mol = rdMolStandardize.CanonicalTautomer(mol)
 
-        # Convert the canonical molecule back to a SMILES string
-        canonical_smiles = Chem.MolToSmiles(canonical_mol)
+            # Convert the canonical molecule back to a SMILES string
+            canonical_smiles = Chem.MolToSmiles(canonical_mol)
+        except RuntimeError:
+            canonical_smiles = self.smiles
 
         # Check if the SMILES string is tautomerized.
         difference = self.smiles != canonical_smiles
@@ -62,7 +65,8 @@ class NormalizingStage:
         """
         if check_validity:
             self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False,
-                                                                                get_isomeric_smiles=True)
+                                                                                get_isomeric_smiles=True,
+                                                                                print_logs=False)
 
         post_tautomer_normalized = self.smiles_df['compound'].p_apply(
             lambda x: NormalizeSMILES(x, return_difference=True)
@@ -108,7 +112,8 @@ class NormalizingStage:
         """
         if check_validity:
             self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False,
-                                                                                get_isomeric_smiles=True)
+                                                                                get_isomeric_smiles=True,
+                                                                                print_logs=False)
 
         post_stereoisomer_normalized = self.smiles_df['compound'].p_apply(
             lambda x: NormalizeSMILES(x, return_difference=True)
@@ -155,7 +160,7 @@ class NormalizingStage:
         validation_step_contents = ''
         if check_validity:
             self.smiles_df, validation_step_contents = ValidationStage(self.smiles_df).check_valid_smiles(
-                get_csv=False, get_isomeric_smiles=True, return_contents=True)
+                get_csv=False, print_logs=False, get_isomeric_smiles=True, return_contents=True)
 
         # Normalize stereoisomers
         post_stereoisomer_normalized_smiles_data, differ_after_stereoisomer_normalizing, stereoisomer_step_contents = (

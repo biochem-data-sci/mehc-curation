@@ -20,16 +20,18 @@ class CleaningStage:
                     get_csv: bool = True,
                     get_difference: bool = False,
                     return_contents: bool = False):
+        smiles_col = self.smiles_df.columns.tolist()
         if check_validity:
-            self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False)
+            self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False,
+                                                                                print_logs=False)
 
-        salts_cleaned = self.smiles_df['compound'].p_apply(lambda x: CleaningSMILES(x, return_difference=True)
-                                                           .cleaning_salts(return_is_null_smiles=True))
+        salts_cleaned = self.smiles_df[smiles_col[0]].p_apply(lambda x: CleaningSMILES(x, return_difference=True)
+                                                              .cleaning_salts(return_is_null_smiles=True))
         post_salts_clean_smiles_data = salts_cleaned.p_apply(lambda x: x[0])
         differ_after_clean_salt = salts_cleaned.p_apply(lambda x: x[1])
         is_missing_smiles_string = salts_cleaned.p_apply(lambda x: x[2])
         index_of_salts = differ_after_clean_salt[differ_after_clean_salt == True].index.tolist()
-        salts_in_data = pd.Series(self.smiles_df['compound'].iloc[index_of_salts]).tolist()
+        salts_in_data = pd.Series(self.smiles_df[smiles_col[0]].iloc[index_of_salts]).tolist()
         post_drop_missing_smiles_string = (post_salts_clean_smiles_data.drop(
             is_missing_smiles_string.index[is_missing_smiles_string == True].tolist(),
             axis='index'))
@@ -65,6 +67,8 @@ class CleaningStage:
             return post_drop_missing_smiles_string, differ_after_clean_salt, contents
         elif get_difference and not return_contents:
             return post_drop_missing_smiles_string, differ_after_clean_salt
+        elif return_contents and not get_difference:
+            return post_drop_missing_smiles_string, contents
         elif not get_difference and not return_contents:
             return post_drop_missing_smiles_string
 
@@ -76,15 +80,17 @@ class CleaningStage:
                    get_csv: bool = True,
                    get_difference: bool = False,
                    return_contents: bool = False):
+        smiles_col = self.smiles_df.columns.tolist()
         if check_validity:
-            self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False)
+            self.smiles_df = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False,
+                                                                                print_logs=False)
 
-        neutralized = self.smiles_df['compound'].p_apply(lambda x: CleaningSMILES(x, return_difference=True)
-                                                         .neutralizing_salts())
+        neutralized = self.smiles_df[smiles_col[0]].p_apply(lambda x: CleaningSMILES(x, return_difference=True)
+                                                            .neutralizing_salts())
         post_neutralized_smiles_data = neutralized.p_apply(lambda x: x[0])
         differ_after_neutralize = neutralized.p_apply(lambda x: x[1])
         index_of_targets = differ_after_neutralize[differ_after_neutralize == True].index.tolist()
-        targets_in_data = pd.Series(self.smiles_df['compound'].iloc[index_of_targets]).tolist()
+        targets_in_data = pd.Series(self.smiles_df[smiles_col[0]].loc[index_of_targets]).tolist()
 
         contents = (f'Pre-cleaned smiles data: {len(self.smiles_df)}\n'
                     f'Number of salts were cleaned: {sum(differ_after_neutralize)}\n'
@@ -116,6 +122,8 @@ class CleaningStage:
             return post_neutralized_smiles_data, differ_after_neutralize, contents
         elif get_difference and not return_contents:
             return post_neutralized_smiles_data, differ_after_neutralize
+        elif return_contents and not get_difference:
+            return post_neutralized_smiles_data, contents
         elif not get_difference and not return_contents:
             return post_neutralized_smiles_data
 
@@ -124,7 +132,8 @@ class CleaningStage:
         validation_step_contents = ''
         if check_validity:
             self.smiles_df, validation_step_contents = ValidationStage(self.smiles_df).check_valid_smiles(get_csv=False,
-                                                                                                          return_contents=True)
+                                                                                                          return_contents=True,
+                                                                                                          print_logs=False)
 
         post_salts_cleaned_smiles_data, differ_after_cleaning_salt, cleaning_step_contents = self.clean_salts(
             check_validity=False,

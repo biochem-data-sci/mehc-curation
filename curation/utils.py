@@ -52,41 +52,22 @@ class RemoveSpecificSMILES:
     def is_mixture(self):
         if self.smiles.find('.') != -1:
             if self.smiles.find('.[') == -1:
-                return False
+                return True
             else:
                 if self.smiles.count('.') != self.smiles.count('.['):
-                    return False
-        return True
+                    return True
+        return False
 
     def is_inorganic(self):
-        # inorganic_patterns = [
-        #     Chem.MolFromSmarts("O=C=O"),  # Carbon dioxide
-        #     Chem.MolFromSmarts("C(=O)[O-]"),  # Carbonate ion
-        #     Chem.MolFromSmarts("C#N"),  # Cyanide ion
-        #     Chem.MolFromSmarts("[C]#[O]"),  # Carbon monoxide
-        #     Chem.MolFromSmarts("C(=O)[OH]"),  # Carboxyl group (inorganic context)
-        # ]
-        mol = Chem.MolFromSmiles(self.smiles)
-        # Check for the absence of carbon atoms
-        has_carbon = any(atom.GetSymbol() == 'C' for atom in mol.GetAtoms())
-        if has_carbon is not True:
-            return False
-        # for pattern in inorganic_patterns:
-        #     if mol.HasSubstructMatch(pattern):
-        #         return False
+        mol = Chem.rdmolops.AddHs(Chem.MolFromSmiles(self.smiles))
+        for atom in mol.GetAtoms():
+            if atom.GetSymbol() == 'C':
+                return False
         return True
 
     def is_organometallic(self):
         mol = Chem.MolFromSmiles(self.smiles)
-        metals = ["Li", "Be", "Na", "Mg", "Al", "K", "Ca", "Sc", "Ti", "V", "Cr",
-                  "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Rb", "Sr", "Y", "Zr",
-                  "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb",
-                  "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb",
-                  "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os",
-                  "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Fr", "Ra",
-                  "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es",
-                  "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
-                  "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og"]
+        metals = open("./curation/dat/metals.txt").read().split(',')
         for atom in mol.GetAtoms():
             if atom.GetSymbol() in metals:
                 for neighbor in atom.GetNeighbors():
@@ -103,7 +84,7 @@ class CleaningSMILES:
     def cleaning_salts(self, return_is_null_smiles: bool = False):
         remover = SaltRemover()
         mol = Chem.MolFromSmiles(self.smiles)
-        post_mol = remover.StripMol(mol)
+        post_mol = remover.StripMol(mol, dontRemoveEverything=True)
         post_smiles = Chem.MolToSmiles(post_mol)
         difference = self.smiles != post_smiles
         is_null_smiles = post_smiles == ''
@@ -148,16 +129,20 @@ def remove_duplicates(smiles_df: pd.DataFrame,
                       print_logs: bool = True,
                       get_report: bool = False,
                       get_csv: bool = True,
+                      return_contents: bool = False,
                       show_duplicated_smiles_and_index: bool = True):
     from curation.validate import ValidationStage
     if check_validity:
         smiles_df = ValidationStage(smiles_df).check_valid_smiles(get_csv=False)
 
     duplicated_smiles = smiles_df[smiles_df.duplicated(keep=False)]
-    duplicated_smiles_include_idx = (((duplicated_smiles
-                                       .groupby(duplicated_smiles.columns.tolist(), sort=False))
-                                      .p_apply(lambda x: tuple(x.index)))
-                                     .reset_index(name='index'))
+    try:
+        duplicated_smiles_include_idx = (((duplicated_smiles
+                                           .groupby(duplicated_smiles.columns.tolist(), sort=False))
+                                          .p_apply(lambda x: tuple(x.index)))
+                                         .reset_index(name='index'))
+    except AttributeError:
+        duplicated_smiles_include_idx = duplicated_smiles
     post_smiles_df = smiles_df.merge(duplicated_smiles_include_idx, on='compound', how='left')
 
     post_duplicates_removed_smiles = smiles_df.drop_duplicates()
@@ -186,7 +171,11 @@ def remove_duplicates(smiles_df: pd.DataFrame,
                    report_subdir_name='remove_duplicates')
          .create_csv_file(csv_file_name='duplicated_smiles_include_idx.csv'))
 
-    if show_duplicated_smiles_and_index:
+    if show_duplicated_smiles_and_index and return_contents:
+        return post_duplicates_removed_smiles, post_smiles_df, contents
+    elif show_duplicated_smiles_and_index and not return_contents:
         return post_duplicates_removed_smiles, post_smiles_df
+    elif return_contents and not show_duplicated_smiles_and_index:
+        return post_duplicates_removed_smiles, contents
     else:
         return post_duplicates_removed_smiles

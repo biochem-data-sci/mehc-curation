@@ -1,0 +1,7 @@
+================================================
+3.2. DETAUTOMERIZATION
+================================================
+Number of input SMILES: {detautomerization_input}
+Number of detautomerized compounds: {detautomerized}
+Number of post-detautomerization compounds: {detautomerization_output}
+

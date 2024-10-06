@@ -1,26 +1,25 @@
 import pandas as pd
 import os
+import sys
 from parallel_pandas import ParallelPandas
 from rdkit.Chem.SaltRemover import SaltRemover
 from rdkit.Chem.MolStandardize import rdMolStandardize
 from rdkit import Chem
 
-ParallelPandas.initialize(n_cpu=16, split_factor=4, disable_pr_bar=True)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 class GetReport:
     def __init__(self,
-                 smiles_df: pd.DataFrame,
-                 output_dir_path: str,
+                 output_dir: str,
                  report_subdir_name: str):
-        self.smiles_df = smiles_df
-        self.output_dir_path = output_dir_path
+        self.output_dir = output_dir
         self.report_subdir_name = report_subdir_name
 
     def create_report_file(self,
                            report_file_name: str,
                            content: str):
-        validate_smiles_dir = os.path.join(self.output_dir_path, self.report_subdir_name)
+        validate_smiles_dir = os.path.join(self.output_dir, self.report_subdir_name)
         if not os.path.exists(validate_smiles_dir):
             os.makedirs(validate_smiles_dir)
 
@@ -29,44 +28,45 @@ class GetReport:
             report_file.write(content)
 
     def create_csv_file(self,
+                        smiles_df: pd.DataFrame,
                         csv_file_name: str):
-        validate_smiles_dir = os.path.join(self.output_dir_path, self.report_subdir_name)
+        validate_smiles_dir = os.path.join(self.output_dir, self.report_subdir_name)
         if not os.path.exists(validate_smiles_dir):
             os.makedirs(validate_smiles_dir)
 
         csv_file_path = os.path.join(validate_smiles_dir, csv_file_name)
-        self.smiles_df.to_csv(csv_file_path, index=False, encoding='utf-8')
+        smiles_df.to_csv(csv_file_path, index=False, encoding='utf-8')
 
 
 class RemoveSpecificSMILES:
-    def __init__(self, smiles: str):
-        self.smiles = smiles
+    def __init__(self, smi: str):
+        self.smi = smi
 
     def is_valid(self):
         try:
-            mol = Chem.MolFromSmiles(self.smiles)
+            mol = Chem.MolFromSmiles(self.smi)
             return mol is not None
         except Exception as e:
             return False
 
     def is_mixture(self):
-        if self.smiles.find('.') != -1:
-            if self.smiles.find('.[') == -1:
+        if self.smi.find('.') != -1:
+            if self.smi.find('.[') == -1:
                 return True
             else:
-                if self.smiles.count('.') != self.smiles.count('.['):
+                if self.smi.count('.') != self.smi.count('.['):
                     return True
         return False
 
     def is_inorganic(self):
-        mol = Chem.rdmolops.AddHs(Chem.MolFromSmiles(self.smiles))
+        mol = Chem.rdmolops.AddHs(Chem.MolFromSmiles(self.smi))
         for atom in mol.GetAtoms():
             if atom.GetSymbol() == 'C':
                 return False
         return True
 
     def is_organometallic(self):
-        mol = Chem.MolFromSmiles(self.smiles)
+        mol = Chem.MolFromSmiles(self.smi)
         metals = open("./curation/dat/metals.txt").read().split(',')
         for atom in mol.GetAtoms():
             if atom.GetSymbol() in metals:
@@ -77,35 +77,63 @@ class RemoveSpecificSMILES:
 
 
 class CleaningSMILES:
+    def __init__(self, smi: str, return_dif: bool = False):
+        self.smi = smi
+        self.return_dif = return_dif
+
+    def cleaning_salts(self, return_is_null_smi: bool = False):
+        remover = SaltRemover()
+        mol = Chem.MolFromSmiles(self.smi)
+        post_mol = remover.StripMol(mol, dontRemoveEverything=True)
+        post_smi = Chem.MolToSmiles(post_mol)
+        dif = self.smi != post_smi
+        is_null_smi = post_smi == ''
+        if self.return_dif and return_is_null_smi:
+            return post_smi, dif, is_null_smi
+        elif self.return_dif and not return_is_null_smi:
+            return post_smi, dif
+        elif return_is_null_smi and not self.return_dif:
+            return post_smi, is_null_smi
+        else:
+            return post_smi
+
+    def neutralizing_salts(self):
+        mol = Chem.MolFromSmiles(self.smi)
+        post_mol = neutralize_atoms(mol)
+        post_smi = Chem.MolToSmiles(post_mol)
+        dif = self.smi != post_smi
+        if self.return_dif:
+            return post_smi, dif
+        else:
+            return post_smi
+
+
+class NormalizeSMILES:
     def __init__(self, smiles: str, return_difference: bool = False):
         self.smiles = smiles
         self.return_difference = return_difference
 
-    def cleaning_salts(self, return_is_null_smiles: bool = False):
-        remover = SaltRemover()
+    def normalize_tautomer(self):
         mol = Chem.MolFromSmiles(self.smiles)
-        post_mol = remover.StripMol(mol, dontRemoveEverything=True)
-        post_smiles = Chem.MolToSmiles(post_mol)
-        difference = self.smiles != post_smiles
-        is_null_smiles = post_smiles == ''
-        if self.return_difference and return_is_null_smiles:
-            return post_smiles, difference, is_null_smiles
-        elif self.return_difference and not return_is_null_smiles:
-            return post_smiles, difference
-        elif return_is_null_smiles and not self.return_difference:
-            return post_smiles, is_null_smiles
-        else:
-            return post_smiles
-
-    def neutralizing_salts(self):
-        mol = Chem.MolFromSmiles(self.smiles)
-        post_mol = neutralize_atoms(mol)
-        post_smiles = Chem.MolToSmiles(post_mol)
-        difference = self.smiles != post_smiles
+        try:
+            canonical_mol = rdMolStandardize.CanonicalTautomer(mol)
+            canonical_smiles = Chem.MolToSmiles(canonical_mol)
+        except RuntimeError:
+            canonical_smiles = self.smiles
+        difference = self.smiles != canonical_smiles
         if self.return_difference:
-            return post_smiles, difference
+            return canonical_smiles, difference
         else:
-            return post_smiles
+            return canonical_smiles
+
+    def normalize_stereoisomer(self):
+        mol = Chem.MolFromSmiles(self.smiles)
+        stereo_normalized_smiles = Chem.MolToSmiles(mol, isomericSmiles=False)
+        difference = self.smiles != stereo_normalized_smiles
+        if self.return_difference:
+            return stereo_normalized_smiles, difference
+        else:
+            return stereo_normalized_smiles
 
 
 def neutralize_atoms(mol):
@@ -123,59 +151,85 @@ def neutralize_atoms(mol):
     return mol
 
 
-def remove_duplicates(smiles_df: pd.DataFrame,
-                      check_validity: bool = True,
-                      output_dir_path: str = None,
-                      print_logs: bool = True,
-                      get_report: bool = False,
-                      get_csv: bool = True,
-                      return_contents: bool = False,
-                      show_duplicated_smiles_and_index: bool = True):
+def deduplicate(smi_df: pd.DataFrame,
+                validate: bool = False,
+                output_dir: str = None,
+                print_logs: bool = True,
+                get_report: bool = False,
+                get_output: bool = True,
+                return_format_data: bool = False,
+                show_dup_smi_and_idx: bool = False,
+                n_cpu: int = 1,
+                split_factor: int = 1):
+    ParallelPandas.initialize(n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True)
     from curation.validate import ValidationStage
-    if check_validity:
-        smiles_df = ValidationStage(smiles_df).check_valid_smiles(get_csv=False)
+    smi_col = smi_df.columns.tolist()
+    if validate:
+        smi_df, validate_format_data = ValidationStage(smi_df).validate_smi(get_output=False,
+                                                                            print_logs=False,
+                                                                            param_deduplicate=False,
+                                                                            return_format_data=True,
+                                                                            n_cpu=n_cpu,
+                                                                            split_factor=split_factor)
 
-    duplicated_smiles = smiles_df[smiles_df.duplicated(keep=False)]
-    try:
-        duplicated_smiles_include_idx = (((duplicated_smiles
-                                           .groupby(duplicated_smiles.columns.tolist(), sort=False))
-                                          .p_apply(lambda x: tuple(x.index)))
-                                         .reset_index(name='index'))
-    except AttributeError:
-        duplicated_smiles_include_idx = duplicated_smiles
-    post_smiles_df = smiles_df.merge(duplicated_smiles_include_idx, on='compound', how='left')
+    dup_smi = pd.DataFrame(smi_df[smi_df.duplicated(keep=False)])
+    if len(dup_smi) == 0:
+        dup_smi_include_idx = dup_smi
+    else:
+        try:
+            dup_smi_include_idx = (((dup_smi
+                                     .groupby(dup_smi.columns.tolist(), sort=False))
+                                    .p_apply(lambda x: tuple(x.index)))
+                                   .reset_index(name='index'))
+        except AttributeError:
+            dup_smi_include_idx = dup_smi
+    post_smi_df = smi_df.merge(dup_smi_include_idx, on=smi_col[0], how='left')
 
-    post_duplicates_removed_smiles = smiles_df.drop_duplicates()
+    smi_after_rm_dup = smi_df.drop_duplicates()
 
-    contents = (f'Number of input SMILES strings: {len(smiles_df)}\n'
-                f'Number of unique SMILES strings: {len(post_duplicates_removed_smiles)}\n'
-                f'Number of duplicate SMILES strings: {len(smiles_df) - len(post_duplicates_removed_smiles)}\n')
+    format_data = {
+        'duplicate_validation_input': len(smi_df),
+        'validation_duplicate': len(smi_df) - len(smi_after_rm_dup),
+        'validation_unique': len(smi_after_rm_dup)
+    }
+
+    with open('./curation/template_report/deduplicate.txt', 'r') as dedup_file:
+        template_report = dedup_file.read()
+
+    if validate:
+        format_data.update(validate_format_data)
+        with open("./curation/template_report/validity_check.txt", "r") as validity_check:
+            template_report += validity_check.read()
+
+    with open('./curation/template_report/end.txt', 'r') as end:
+        template_report += end.read()
+
+    formatted_report = template_report.format(**format_data)
 
     if print_logs:
-        print(contents)
+        print(formatted_report)
 
-    if get_csv:
-        (GetReport(post_duplicates_removed_smiles,
-                   output_dir_path=output_dir_path,
-                   report_subdir_name='remove_duplicates')
-         .create_csv_file(csv_file_name='post_duplicates_removed.csv'))
+    if get_output:
+        (GetReport(output_dir=output_dir,
+                   report_subdir_name='deduplicate')
+         .create_csv_file(smi_after_rm_dup,
+                          csv_file_name='post_duplicates_removed.csv'))
 
     if get_report:
-        (GetReport(post_duplicates_removed_smiles,
-                   output_dir_path=output_dir_path,
-                   report_subdir_name='remove_duplicates')
-         .create_report_file(report_file_name='remove_duplicates_report.txt',
-                             content=contents))
-        (GetReport(post_smiles_df,
-                   output_dir_path=output_dir_path,
-                   report_subdir_name='remove_duplicates')
-         .create_csv_file(csv_file_name='duplicated_smiles_include_idx.csv'))
+        (GetReport(output_dir=output_dir,
+                   report_subdir_name='deduplicate')
+         .create_report_file(report_file_name='deduplicate.txt',
+                             content=formatted_report))
+        (GetReport(output_dir=output_dir,
+                   report_subdir_name='deduplicate')
+         .create_csv_file(post_smi_df,
+                          csv_file_name='duplicated_smiles_include_idx.csv'))
 
-    if show_duplicated_smiles_and_index and return_contents:
-        return post_duplicates_removed_smiles, post_smiles_df, contents
-    elif show_duplicated_smiles_and_index and not return_contents:
-        return post_duplicates_removed_smiles, post_smiles_df
-    elif return_contents and not show_duplicated_smiles_and_index:
-        return post_duplicates_removed_smiles, contents
+    if show_dup_smi_and_idx and return_format_data:
+        return smi_after_rm_dup, post_smi_df, format_data
+    elif show_dup_smi_and_idx and not return_format_data:
+        return smi_after_rm_dup, post_smi_df
+    elif return_format_data and not show_dup_smi_and_idx:
+        return smi_after_rm_dup, format_data
     else:
-        return post_duplicates_removed_smiles
+        return smi_after_rm_dup

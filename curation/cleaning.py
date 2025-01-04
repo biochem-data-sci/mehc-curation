@@ -141,12 +141,17 @@ class CleaningStage:
         neutralized = self.smi_df[smi_col[0]].p_apply(lambda x: CleaningSMILES(x, return_dif=True)
                                                       .neutralizing_salts())
         post_neutralized_smi_data = neutralized.p_apply(lambda x: x[0])
+        post_neutralized_smi_data = post_neutralized_smi_data.dropna(how='any')
+
         diff_after_neutralize = neutralized.p_apply(lambda x: x[1])
+        diff_after_neutralize = diff_after_neutralize.dropna(how='any')
+
         post_neutralized_smi_data = post_neutralized_smi_data.to_frame()
 
         format_data = {
             'neutralization_input': len(self.smi_df),
             'neutralized': sum(diff_after_neutralize),
+            'neutralize_unprocessable': (len(post_neutralized_smi_data) - len(self.smi_df)),
             'neutralization_output': len(post_neutralized_smi_data),
         }
 

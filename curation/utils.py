@@ -99,13 +99,21 @@ class CleaningSMILES:
 
     def neutralizing_salts(self):
         mol = Chem.MolFromSmiles(self.smi)
-        post_mol = neutralize_atoms(mol)
-        post_smi = Chem.MolToSmiles(post_mol)
-        dif = self.smi != post_smi
-        if self.return_dif:
-            return post_smi, dif
-        else:
-            return post_smi
+        try:
+            post_mol = neutralize_atoms(mol)
+            post_smi = Chem.MolToSmiles(post_mol)
+            dif = self.smi != post_smi
+            if self.return_dif:
+                return post_smi, dif
+            else:
+                return post_smi
+        except Chem.rdchem.AtomValenceException:
+            post_smi = None
+            dif = None
+            if self.return_dif:
+                return post_smi, dif
+            else:
+                return post_smi
 
 
 class NormalizeSMILES:
@@ -233,3 +241,11 @@ def deduplicate(smi_df: pd.DataFrame,
         return smi_after_rm_dup, format_data
     else:
         return smi_after_rm_dup
+
+# def deduplicate_with_label(smi_df: pd.DataFrame,
+#                            validate: bool = False,
+#                            output_dir: str = None,
+#                            print_logs: bool = True,
+#                            get_report: bool = False,
+#                            get_output: bool = True,):
+#

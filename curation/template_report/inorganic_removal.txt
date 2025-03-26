@@ -1,5 +1,5 @@
 ================================================
-2. INORGANICS REMOVAL
+1.2. INORGANICS REMOVAL
 ================================================
 Number of input SMILES: {rm_inorganic_input}
 Number of inorganic compounds: {inorganic}

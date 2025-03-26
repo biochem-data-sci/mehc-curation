@@ -1,5 +1,5 @@
 ================================================
-1. MIXTURE REMOVAL
+1.1. MIXTURE REMOVAL
 ================================================
 Number of input SMILES: {rm_mixtures_input}
 Number of mixture SMILES: {mixture}

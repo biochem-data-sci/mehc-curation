@@ -14,21 +14,27 @@ class CleaningStage:
     def __init__(self, smi_df: pd.DataFrame):
         self.smi_df = smi_df
 
-    def cl_salts(
+    def cl_salt(
         self,
         validate: bool = True,
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         get_diff: bool = False,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, CleaningSMILES, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -38,7 +44,6 @@ class CleaningStage:
             self.smi_df, validation_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 print_logs=False,
                 param_deduplicate=False,
                 return_format_data=True,
@@ -117,12 +122,12 @@ class CleaningStage:
             post_smi_df, dup_idx_data, deduplicate_format_data = deduplicate(
                 post_smi_df,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -183,15 +188,21 @@ class CleaningStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         get_diff: bool = False,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, CleaningSMILES, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -201,7 +212,6 @@ class CleaningStage:
             self.smi_df, validation_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 print_logs=False,
                 param_deduplicate=False,
                 return_format_data=True,
@@ -278,13 +288,12 @@ class CleaningStage:
         if param_deduplicate:
             post_smi_df, dup_idx_data, deduplicate_format_data = deduplicate(
                 post_smi_df,
-                validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -338,20 +347,26 @@ class CleaningStage:
         elif not get_diff and not return_format_data:
             return post_smi_df
 
-    def cl_and_neutralize(
+    def complete_cleaning(
         self,
         validate: bool = True,
         neutralizing_method: str = "boyle",
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         format_data = {}
 
@@ -365,7 +380,6 @@ class CleaningStage:
                 self.smi_df
             ).validate_smi(
                 print_logs=False,
-                get_output=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -377,11 +391,10 @@ class CleaningStage:
                 template_report += validity_check.read()
 
         post_salts_cl_smi_data, diff_after_cl_salt, cl_salt_format_data = (
-            self.cl_salts(
+            self.cl_salt(
                 validate=False,
                 print_logs=False,
                 get_diff=True,
-                get_output=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -402,7 +415,6 @@ class CleaningStage:
             method=neutralizing_method,
             print_logs=False,
             get_diff=True,
-            get_output=False,
             return_format_data=True,
             n_cpu=n_cpu,
             split_factor=split_factor,
@@ -422,12 +434,12 @@ class CleaningStage:
             ) = deduplicate(
                 post_neutralized_smi_data,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -541,7 +553,7 @@ if __name__ == "__main__":
         "--n_cpu",
         required=False,
         type=int,
-        default=1,
+        default=None,
         help="Number of CPUs to use (optional)",
     )
     parser.add_argument(
@@ -568,9 +580,10 @@ if __name__ == "__main__":
 
     match args.choice:
         case 1:
-            output = cleaning.cl_salts(**param_dict)
+            output = cleaning.cl_salt(**param_dict)
         case 2:
             output = cleaning.neutralize(**param_dict)
         case 3:
-            output = cleaning.cl_and_neutralize(**param_dict)
+            output = cleaning.complete_cleaning(**param_dict)
     print("Your action is done!")
+

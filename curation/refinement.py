@@ -17,10 +17,10 @@ class Refinement:
         self,
         output_dir: str = None,
         validate: bool = True,
-        rm_mixtures: bool = True,
-        rm_inorganics: bool = True,
-        rm_organometallics: bool = True,
-        cl_salts: bool = True,
+        rm_mixture: bool = True,
+        rm_inorganic: bool = True,
+        rm_organometallic: bool = True,
+        cl_salt: bool = True,
         neutralize: bool = True,
         neutralizing_method: str = "boyle",
         validate_post_neutr: bool = True,
@@ -29,9 +29,10 @@ class Refinement:
         rm_dup_between_stages: bool = True,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
-        n_cpu: int = 1,
+        # get_output: bool = True,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         """
         Note: 1st stage = Validation stage
@@ -43,14 +44,19 @@ class Refinement:
         from curation.cleaning import CleaningStage
         from curation.normalization import NormalizingStage
 
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
+
         # pre_refined_smiles = self.smi_df.copy()
         rm_dup_after_1st_stage: bool = (
             validate
-            or rm_mixtures
-            or rm_inorganics
-            or rm_organometallics
+            or rm_mixture
+            or rm_inorganic
+            or rm_organometallic
         )
-        rm_dup_after_2nd_stage: bool = cl_salts or neutralize
+        rm_dup_after_2nd_stage: bool = cl_salt or neutralize
         rm_dup_after_3rd_stage: bool = destereoisomerize or detautomerize
         data_post_1st_stage_rm_dup = pd.DataFrame()
         data_post_2nd_stage_rm_dup = pd.DataFrame()
@@ -66,7 +72,6 @@ class Refinement:
             self.smi_df, validate_beginning_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 return_format_data=True,
                 print_logs=False,
                 param_deduplicate=False,
@@ -79,55 +84,52 @@ class Refinement:
             ) as validity_check:
                 template_report += validity_check.read()
 
-        if rm_mixtures:
-            self.smi_df, rm_mixtures_format_data = ValidationStage(
+        if rm_mixture:
+            self.smi_df, rm_mixture_format_data = ValidationStage(
                 self.smi_df
-            ).rm_mixtures(
+            ).rm_mixture(
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
             )
-            format_data.update(rm_mixtures_format_data)
+            format_data.update(rm_mixture_format_data)
             with open(
                 os.path.join(template_dir, "mixture_removal.txt"), "r"
             ) as mixture_removal:
                 template_report += mixture_removal.read()
 
-        if rm_inorganics:
-            self.smi_df, rm_inorganics_format_data = ValidationStage(
+        if rm_inorganic:
+            self.smi_df, rm_inorganic_format_data = ValidationStage(
                 self.smi_df
-            ).rm_inorganics(
+            ).rm_inorganic(
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
             )
-            format_data.update(rm_inorganics_format_data)
+            format_data.update(rm_inorganic_format_data)
             with open(
                 os.path.join(template_dir, "inorganic_removal.txt"), "r"
             ) as inorganic_removal:
                 template_report += inorganic_removal.read()
 
-        if rm_organometallics:
-            self.smi_df, rm_organometallics_format_data = ValidationStage(
+        if rm_organometallic:
+            self.smi_df, rm_organometallic_format_data = ValidationStage(
                 self.smi_df
-            ).rm_organometallics(
+            ).rm_organometallic(
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
             )
-            format_data.update(rm_organometallics_format_data)
+            format_data.update(rm_organometallic_format_data)
             with open(
                 os.path.join(template_dir, "organometallic_removal.txt"), "r"
             ) as organometallic_removal:
@@ -138,12 +140,12 @@ class Refinement:
                 deduplicate(
                     self.smi_df,
                     validate=False,
-                    get_output=False,
                     print_logs=False,
                     show_dup_smi_and_idx=True,
                     return_format_data=True,
                     n_cpu=n_cpu,
                     split_factor=split_factor,
+                    partial_dup_cols=partial_dup_cols,
                 )
             )
             with open(
@@ -161,13 +163,12 @@ class Refinement:
         ) as cleaning_title:
             template_report += cleaning_title.read()
 
-        if cl_salts:
+        if cl_salt:
             self.smi_df, cl_salt_format_data = CleaningStage(
                 self.smi_df
-            ).cl_salts(
+            ).cl_salt(
                 validate=False,
                 print_logs=False,
-                get_output=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -185,7 +186,6 @@ class Refinement:
                 validate=False,
                 method=neutralizing_method,
                 print_logs=False,
-                get_output=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -202,12 +202,12 @@ class Refinement:
                 deduplicate(
                     self.smi_df,
                     validate=False,
-                    get_output=False,
                     print_logs=False,
                     show_dup_smi_and_idx=True,
                     return_format_data=True,
                     n_cpu=n_cpu,
                     split_factor=split_factor,
+                    partial_dup_cols=partial_dup_cols,
                 )
             )
             with open(
@@ -229,7 +229,6 @@ class Refinement:
             self.smi_df, validate_post_neutr_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 return_format_data=True,
                 print_logs=False,
                 param_deduplicate=False,
@@ -242,7 +241,6 @@ class Refinement:
                 self.smi_df
             ).destereoisomerize(
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -259,7 +257,6 @@ class Refinement:
                 self.smi_df
             ).detautomerize(
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -277,12 +274,12 @@ class Refinement:
                 deduplicate(
                     self.smi_df,
                     validate=False,
-                    get_output=False,
                     print_logs=False,
                     show_dup_smi_and_idx=True,
                     return_format_data=True,
                     n_cpu=n_cpu,
                     split_factor=split_factor,
+                    partial_dup_cols=partial_dup_cols,
                 )
             )
             with open(
@@ -371,14 +368,14 @@ if __name__ == "__main__":
              "(optional, default is false)",
     )
     parser.add_argument(
-        "--rm_mixtures",
+        "--rm_mixture",
         required=False,
         action="store_false",
         default=True,
         help="Remove mixtures from SMILES data (optional, default is true)",
     )
     parser.add_argument(
-        "--rm_inorganics",
+        "--rm_inorganic",
         required=False,
         action="store_false",
         default=True,
@@ -386,7 +383,7 @@ if __name__ == "__main__":
              "(optional, default is true)",
     )
     parser.add_argument(
-        "--rm_organometallics",
+        "--rm_organometallic",
         required=False,
         action="store_false",
         default=True,
@@ -394,7 +391,7 @@ if __name__ == "__main__":
              "(optional, default is true)",
     )
     parser.add_argument(
-        "--cl_salts",
+        "--cl_salt",
         required=False,
         action="store_false",
         default=True,
@@ -451,7 +448,7 @@ if __name__ == "__main__":
         "--n_cpu",
         required=False,
         type=int,
-        default=1,
+        default=None,
         help="Number of CPUs to use (optional)",
     )
     parser.add_argument(
@@ -468,10 +465,10 @@ if __name__ == "__main__":
 
     param_dict = {
         "validate": args.validate_beginning,
-        "rm_mixtures": args.rm_mixtures,
-        "rm_inorganics": args.rm_inorganics,
-        "rm_organometallics": args.rm_organometallics,
-        "cl_salts": args.cl_salts,
+        "rm_mixture": args.rm_mixture,
+        "rm_inorganic": args.rm_inorganic,
+        "rm_organometallic": args.rm_organometallic,
+        "cl_salt": args.cl_salt,
         "neutralize": args.neutralize,
         "destereoisomerize": args.destereoisomerize,
         "detautomerize": args.detautomerize,

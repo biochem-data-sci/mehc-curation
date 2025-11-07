@@ -66,6 +66,21 @@ class RemoveSpecificSMILES:
                 return False
         return True
 
+        # mol = Chem.AddHs(Chem.MolFromSmiles(self.smi))  # explicit Hs
+        # has_C = False
+        # has_H = False
+        #
+        # for atom in mol.GetAtoms():
+        #     if atom.GetSymbol() == "C":
+        #         has_C = True
+        #     elif atom.GetSymbol() == "H":
+        #         has_H = True
+        #
+        # if has_C and has_H:
+        #     return False
+        # else:
+        #     return True
+
     def is_organometallic(self):
         mol = Chem.MolFromSmiles(self.smi)
         metals = open(os.path.join(dat_dir, "metals.txt")).read().split(",")
@@ -172,16 +187,22 @@ def deduplicate(
     output_dir: str = None,
     print_logs: bool = True,
     get_report: bool = False,
-    get_output: bool = True,
+    # get_output: bool = True,
     return_format_data: bool = False,
     show_dup_smi_and_idx: bool = False,
     n_cpu: int = 1,
     split_factor: int = 1,
+    partial_dup_cols: list = None
 ):
     ParallelPandas.initialize(
         n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
     )
     from curation.validate import ValidationStage
+
+    if output_dir is None:
+        get_output = False
+    else:
+        get_output = True
 
     if validate:
         smi_df, validate_format_data = ValidationStage(smi_df).validate_smi(
@@ -198,9 +219,18 @@ def deduplicate(
     perfect_dups_mask = smi_df.duplicated(keep="first")
     perfect_dups = smi_df[perfect_dups_mask]
 
-    grouped = smi_df.groupby(smi_col[0]).nunique()
-    partial_dups_smiles = grouped[grouped.gt(1).any(axis=1)].index
-    partial_dups = smi_df[smi_df[smi_col[0]].isin(partial_dups_smiles)]
+    # Use the specified columns for partial duplicates, or default to the SMILES column
+    if partial_dup_cols is None:
+        partial_dup_cols = [smi_col[0]]  # Default to the first column if not specified
+
+    # grouped = smi_df.groupby(smi_col[0]).nunique()
+    # partial_dups_smiles = grouped[grouped.gt(1).any(axis=1)].index
+    # partial_dups = smi_df[smi_df[smi_col[0]].isin(partial_dups_smiles)]
+
+    grouped = smi_df.groupby(partial_dup_cols).nunique()
+    partial_dups_mask = grouped.gt(1).any(axis=1)
+    partial_dups_smiles = partial_dups_mask[partial_dups_mask].index
+    partial_dups = smi_df[smi_df[partial_dup_cols].apply(tuple, 1).isin(partial_dups_smiles)]
 
     dups_info = (
         pd.concat([perfect_dups, partial_dups], ignore_index=True)

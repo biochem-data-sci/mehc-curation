@@ -19,16 +19,22 @@ class ValidationStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         get_invalid_smi_idx: bool = False,
         get_isomeric_smi: bool = True,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, RemoveSpecificSMILES, deduplicate
         from rdkit import Chem
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -76,12 +82,12 @@ class ValidationStage:
             valid_smi, dup_idx_data, rm_dup_format_data = deduplicate(
                 valid_smi,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(rm_dup_format_data)
             with open(
@@ -143,20 +149,26 @@ class ValidationStage:
         elif not get_invalid_smi_idx and not return_format_data:
             return valid_smi
 
-    def rm_mixtures(
+    def rm_mixture(
         self,
         validate: bool = True,
         output_dir: str = None,
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, RemoveSpecificSMILES, deduplicate
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -164,7 +176,6 @@ class ValidationStage:
         smi_col = self.smi_df.columns.tolist()
         if validate:
             self.smi_df, validate_format_data = self.validate_smi(
-                get_output=False,
                 print_logs=False,
                 param_deduplicate=False,
                 return_format_data=True,
@@ -183,7 +194,7 @@ class ValidationStage:
         ].index.tolist()
 
         format_data = {
-            "rm_mixtures_input": len(self.smi_df),
+            "rm_mixture_input": len(self.smi_df),
             "mixture": len(invalid_smi),
             "non_mixture": len(valid_smi),
         }
@@ -210,12 +221,12 @@ class ValidationStage:
             valid_smi, dup_idx_data, deduplicate_format_data = deduplicate(
                 valid_smi,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -235,22 +246,22 @@ class ValidationStage:
         if get_output:
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_mixtures"
+                    output_dir=output_dir, report_subdir_name="rm_mixture"
                 ).create_csv_file(valid_smi, csv_file_name="non_mixtures.csv")
             )
 
         if get_report:
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_mixtures"
+                    output_dir=output_dir, report_subdir_name="rm_mixture"
                 ).create_report_file(
-                    report_file_name="rm_mixtures.txt",
+                    report_file_name="rm_mixture.txt",
                     content=formatted_report,
                 )
             )
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_mixtures"
+                    output_dir=output_dir, report_subdir_name="rm_mixture"
                 ).create_csv_file(invalid_smi, csv_file_name="mixtures.csv")
             )
             if param_deduplicate:
@@ -272,20 +283,26 @@ class ValidationStage:
         elif not get_invalid_smi_idx and not return_format_data:
             return valid_smi
 
-    def rm_inorganics(
+    def rm_inorganic(
         self,
         validate: bool = True,
         output_dir: str = None,
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, RemoveSpecificSMILES, deduplicate
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -293,7 +310,6 @@ class ValidationStage:
         smi_col = self.smi_df.columns.tolist()
         if validate:
             self.smi_df, validate_format_data = self.validate_smi(
-                get_output=False,
                 print_logs=False,
                 param_deduplicate=False,
                 return_format_data=True,
@@ -307,9 +323,12 @@ class ValidationStage:
         valid_smi = self.smi_df[self.smi_df["is_valid"] == False].copy()
         valid_smi.drop(columns=["is_valid"], inplace=True)
         invalid_smi = self.smi_df[self.smi_df["is_valid"]][smi_col[0]]
+        # idx_of_invalid_smi = self.smi_df[
+        #     self.smi_df["is_valid"] == False
+        # ].index.tolist()
         idx_of_invalid_smi = self.smi_df[
             self.smi_df["is_valid"] == False
-        ].index.tolist()
+        ][smi_col[0]].tolist()
 
         format_data = {
             "rm_inorganic_input": len(self.smi_df),
@@ -339,12 +358,12 @@ class ValidationStage:
             valid_smi, dup_idx_data, deduplicate_format_data = deduplicate(
                 valid_smi,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -364,29 +383,29 @@ class ValidationStage:
         if get_output:
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_inorganics"
+                    output_dir=output_dir, report_subdir_name="rm_inorganic"
                 ).create_csv_file(valid_smi, csv_file_name="organics.csv")
             )
 
         if get_report:
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_inorganics"
+                    output_dir=output_dir, report_subdir_name="rm_inorganic"
                 ).create_report_file(
-                    report_file_name="rm_inorganics.txt",
+                    report_file_name="rm_inorganic.txt",
                     content=formatted_report,
                 )
             )
             (
                 GetReport(
-                    output_dir=output_dir, report_subdir_name="rm_inorganics"
+                    output_dir=output_dir, report_subdir_name="rm_inorganic"
                 ).create_csv_file(invalid_smi, csv_file_name="inorganics.csv")
             )
             if param_deduplicate:
                 (
                     GetReport(
                         output_dir=output_dir,
-                        report_subdir_name="rm_inorganics",
+                        report_subdir_name="rm_inorganic",
                     ).create_csv_file(
                         dup_idx_data, csv_file_name="duplicate_index_data.csv"
                     )
@@ -401,20 +420,26 @@ class ValidationStage:
         elif not get_invalid_smi_idx and not return_format_data:
             return valid_smi
 
-    def rm_organometallics(
+    def rm_organometallic(
         self,
         validate: bool = True,
         output_dir: str = None,
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, RemoveSpecificSMILES, deduplicate
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -422,7 +447,6 @@ class ValidationStage:
         smi_col = self.smi_df.columns.tolist()
         if validate:
             self.smi_df, validate_format_data = self.validate_smi(
-                get_output=False,
                 print_logs=False,
                 param_deduplicate=False,
                 return_format_data=True,
@@ -468,12 +492,12 @@ class ValidationStage:
             valid_smi, dup_idx_data, deduplicate_format_data = deduplicate(
                 valid_smi,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -494,7 +518,7 @@ class ValidationStage:
             (
                 GetReport(
                     output_dir=output_dir,
-                    report_subdir_name="rm_organometallics",
+                    report_subdir_name="rm_organometallic",
                 ).create_csv_file(
                     valid_smi, csv_file_name="non_organometallic.csv"
                 )
@@ -504,16 +528,16 @@ class ValidationStage:
             (
                 GetReport(
                     output_dir=output_dir,
-                    report_subdir_name="rm_organometallics",
+                    report_subdir_name="rm_organometallic",
                 ).create_report_file(
-                    report_file_name="rm_organometallics.txt",
+                    report_file_name="rm_organometallic.txt",
                     content=formatted_report,
                 )
             )
             (
                 GetReport(
                     output_dir=output_dir,
-                    report_subdir_name="rm_organometallics",
+                    report_subdir_name="rm_organometallic",
                 ).create_csv_file(
                     invalid_smi, csv_file_name="organometallic.csv"
                 )
@@ -522,7 +546,7 @@ class ValidationStage:
                 (
                     GetReport(
                         output_dir=output_dir,
-                        report_subdir_name="rm_organometallics",
+                        report_subdir_name="rm_organometallic",
                     ).create_csv_file(
                         dup_idx_data, csv_file_name="duplicate_index_data.csv"
                     )
@@ -543,12 +567,18 @@ class ValidationStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = True,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         from curation.utils import GetReport, deduplicate
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         format_data = {}
 
@@ -562,7 +592,6 @@ class ValidationStage:
                 self.validate_smi(
                     print_logs=False,
                     get_invalid_smi_idx=True,
-                    get_output=False,
                     param_deduplicate=False,
                     return_format_data=True,
                     n_cpu=n_cpu,
@@ -575,53 +604,50 @@ class ValidationStage:
             ) as validity_check:
                 template_report += validity_check.read()
 
-        self.smi_df, mixture_idx, rm_mixtures_format_data = self.rm_mixtures(
+        self.smi_df, mixture_idx, rm_mixture_format_data = self.rm_mixture(
             validate=False,
             print_logs=False,
             get_invalid_smi_idx=True,
-            get_output=False,
             param_deduplicate=False,
             return_format_data=True,
             n_cpu=n_cpu,
             split_factor=split_factor,
         )
-        format_data.update(rm_mixtures_format_data)
+        format_data.update(rm_mixture_format_data)
         with open(
             os.path.join(template_dir, "mixture_removal.txt"), "r"
         ) as mixture_removal:
             template_report += mixture_removal.read()
 
-        self.smi_df, inorganic_idx, rm_inorganics_format_data = (
-            self.rm_inorganics(
+        self.smi_df, inorganic_idx, rm_inorganic_format_data = (
+            self.rm_inorganic(
                 validate=False,
                 print_logs=False,
                 get_invalid_smi_idx=True,
-                get_output=False,
                 param_deduplicate=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
             )
         )
-        format_data.update(rm_inorganics_format_data)
+        format_data.update(rm_inorganic_format_data)
         with open(
             os.path.join(template_dir, "inorganic_removal.txt"), "r"
         ) as inorganic_removal:
             template_report += inorganic_removal.read()
 
-        self.smi_df, organometallic_idx, rm_organometallics_format_data = (
-            self.rm_organometallics(
+        self.smi_df, organometallic_idx, rm_organometallic_format_data = (
+            self.rm_organometallic(
                 validate=False,
                 print_logs=False,
                 get_invalid_smi_idx=True,
-                get_output=False,
                 param_deduplicate=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
             )
         )
-        format_data.update(rm_organometallics_format_data)
+        format_data.update(rm_organometallic_format_data)
         with open(
             os.path.join(template_dir, "organometallic_removal.txt"), "r"
         ) as organometallic_removal:
@@ -632,12 +658,12 @@ class ValidationStage:
             self.smi_df, dup_idx_data, deduplicate_format_data = deduplicate(
                 self.smi_df,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -750,7 +776,7 @@ if __name__ == "__main__":
         "--n_cpu",
         required=False,
         type=int,
-        default=1,
+        default=None,
         help="Number of CPUs to use (optional)",
     )
     parser.add_argument(
@@ -782,11 +808,11 @@ if __name__ == "__main__":
         case 1:
             output = validation.validate_smi(**param_dict)
         case 2:
-            output = validation.rm_mixtures(**param_dict)
+            output = validation.rm_mixture(**param_dict)
         case 3:
-            output = validation.rm_inorganics(**param_dict)
+            output = validation.rm_inorganic(**param_dict)
         case 4:
-            output = validation.rm_organometallics(**param_dict)
+            output = validation.rm_organometallic(**param_dict)
         case 5:
             output = validation.complete_validation(**param_dict)
     print("Your action is done!")

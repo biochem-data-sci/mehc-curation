@@ -20,18 +20,24 @@ class NormalizingStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         get_diff: bool = False,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         """
         Normalize tautomers for the given SMILES dataframe.
         """
         from curation.utils import GetReport, NormalizeSMILES, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -41,7 +47,6 @@ class NormalizingStage:
             self.smi_df, validation_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -104,12 +109,12 @@ class NormalizingStage:
             post_smi_df, dup_idx_data, deduplicate_format_data = deduplicate(
                 post_smi_df,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -169,18 +174,24 @@ class NormalizingStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         get_diff: bool = False,
         param_deduplicate: bool = False,
         return_format_data: bool = False,
         n_cpu: int = 1,
-        split_factor: int = 1,
+        split_factor: int = None,
+        partial_dup_cols: list = None
     ):
         """
         Normalize stereoisomers for the given SMILES dataframe.
         """
         from curation.utils import GetReport, NormalizeSMILES, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         ParallelPandas.initialize(
             n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
@@ -190,7 +201,6 @@ class NormalizingStage:
             self.smi_df, validation_format_data = ValidationStage(
                 self.smi_df
             ).validate_smi(
-                get_output=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -254,12 +264,12 @@ class NormalizingStage:
             post_smi_df, dup_idx_data, deduplicate_format_data = deduplicate(
                 post_smi_df,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -312,10 +322,11 @@ class NormalizingStage:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        get_output: bool = True,
+        # get_output: bool = True,
         param_deduplicate: bool = False,
-        n_cpu: int = 1,
+        n_cpu: int = None,
         split_factor: int = 1,
+        partial_dup_cols: list = None
     ):
         """
         Normalize both tautomers and stereoisomers
@@ -323,6 +334,11 @@ class NormalizingStage:
         """
         from curation.utils import GetReport, deduplicate
         from curation.validate import ValidationStage
+
+        if output_dir is None:
+            get_output = False
+        else:
+            get_output = True
 
         format_data = {}
 
@@ -336,7 +352,6 @@ class NormalizingStage:
                 self.smi_df
             ).validate_smi(
                 print_logs=False,
-                get_output=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -354,7 +369,6 @@ class NormalizingStage:
         ) = NormalizingStage(self.smi_df).destereoisomerize(
             validate=False,
             print_logs=False,
-            get_output=False,
             get_diff=True,
             return_format_data=True,
             n_cpu=n_cpu,
@@ -373,7 +387,6 @@ class NormalizingStage:
         ) = NormalizingStage(post_destereoisomerized_smi_data).detautomerize(
             validate=False,
             print_logs=False,
-            get_output=False,
             get_report=False,
             get_diff=True,
             return_format_data=True,
@@ -395,12 +408,12 @@ class NormalizingStage:
             ) = deduplicate(
                 post_detautomerized_smi_data,
                 validate=False,
-                get_output=False,
                 print_logs=False,
                 show_dup_smi_and_idx=True,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                partial_dup_cols=partial_dup_cols,
             )
             format_data.update(deduplicate_format_data)
             with open(
@@ -514,7 +527,7 @@ if __name__ == "__main__":
         "--n_cpu",
         required=False,
         type=int,
-        default=1,
+        default=None,
         help="Number of CPUs to use (optional)",
     )
     parser.add_argument(

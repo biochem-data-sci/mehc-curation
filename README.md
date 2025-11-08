@@ -154,7 +154,7 @@ If you use this library in your research, please cite:
 ```bibtex
 @software{mehc_curation,
   title={MEHC Curation: A Comprehensive Toolkit for SMILES Molecular Data Curation},
-  author={Your Name},
+  author={Chinh Pham, Thanh-Hoang Nguyen-Vo, Binh P. Nguyen},
   year={2024},
   url={https://github.com/biochem-data-sci/mehc-curation}
 }
@@ -167,4 +167,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For issues and questions, please open an issue on [GitHub](https://github.com/biochem-data-sci/mehc-curation/issues).
+
 

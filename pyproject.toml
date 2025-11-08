@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mehc-curation"
+version = "1.0.0"
+description = "A comprehensive toolkit for SMILES molecular data curation, validation, cleaning, and normalization"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["chemistry", "SMILES", "molecular data", "validation", "cleaning", "normalization", "cheminformatics", "RDKit"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "pandas>=1.3.0",
+    "parallel-pandas>=0.2.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/biochem-data-sci/mehc-curation"
+Documentation = "https://github.com/biochem-data-sci/mehc-curation#readme"
+Repository = "https://github.com/biochem-data-sci/mehc-curation"
+"Bug Tracker" = "https://github.com/biochem-data-sci/mehc-curation/issues"
+
+[project.scripts]
+mehc-validation = "validation.__main__:main"
+mehc-cleaning = "cleaning.__main__:main"
+mehc-normalization = "normalization.__main__:main"
+mehc-refinement = "refinement.__main__:main"
+
+[tool.setuptools]
+packages = ["validation", "cleaning", "normalization", "refinement", "utils"]
+
+[tool.setuptools.package-data]
+"*" = ["template_report/*.txt", "dat/*.txt"]
+

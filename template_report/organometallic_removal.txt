@@ -1,0 +1,7 @@
+================================================
+1.3. ORGANOMETALLIC REMOVAL
+================================================
+Number of input SMILES: {rm_organometallic_input}
+Number of organometallic compounds: {organometallic}
+Number of organics: {non_organometallic}
+

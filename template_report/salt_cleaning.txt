@@ -1,0 +1,8 @@
+================================================
+2.1. SALT CLEANING
+================================================
+Number of input SMILES: {salt_cleaning_input}
+Number of desalted compounds: {desalted}
+Number of unprocessable compounds: {unprocessable}
+Number of post-desalting compounds: {salt_cleaning_output}
+

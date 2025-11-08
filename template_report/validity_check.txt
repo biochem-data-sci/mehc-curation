@@ -1,0 +1,7 @@
+================================================
+0. VALIDITY CHECK
+================================================
+Number of input SMILES: {validity_input}
+Number of invalid SMILES: {invalid}
+Number of valid SMILES: {valid}
+

@@ -1,0 +1,8 @@
+================================================
+2.2. NEUTRALIZATION
+================================================
+Number of input SMILES: {neutralization_input}
+Number of neutralized compounds: {neutralized}
+Number of unprocessable compound: {neutralize_unprocessable}
+Number of post-neutralization compounds: {neutralization_output}
+

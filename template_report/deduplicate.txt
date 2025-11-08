@@ -1,0 +1,8 @@
+------------------------------------------------
+DUPLICATE REMOVAL
+------------------------------------------------
+Number of input SMILES: {duplicate_validation_input}
+Number of perfect duplicated SMILES: {perfect_dups}
+Number of partial duplicated SMILES: {partial_dups}
+Number of unique SMILES: {validation_unique}
+

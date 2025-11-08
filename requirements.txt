@@ -1,0 +1,16 @@
+# Core dependencies for mehc_curation
+pandas>=1.3.0
+parallel-pandas>=0.2.8
+
+# RDKit - IMPORTANT: RDKit is best installed via conda
+# Install RDKit using conda (recommended):
+#   conda install -c conda-forge rdkit
+#
+# For pip installation (alternative, may not work on all platforms):
+#   pip install rdkit-pypi
+#
+# Note: RDKit is not included in requirements.txt by default because
+# it should be installed via conda for best compatibility.
+# If you must use pip, uncomment the line below:
+# rdkit-pypi>=2022.9.5
+

@@ -1,0 +1,17 @@
+# Include template report files
+include template_report/*.txt
+
+# Include data files
+include dat/*.txt
+
+# Include README and license
+include README.md
+include LICENSE
+include requirements.txt
+
+# Exclude cache and compiled files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude .DS_Store
+

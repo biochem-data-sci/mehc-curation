@@ -1,0 +1,7 @@
+================================================
+1.1. MIXTURE REMOVAL
+================================================
+Number of input SMILES: {rm_mixture_input}
+Number of mixture SMILES: {mixture}
+Number of non-mixture SMILES: {non_mixture}
+

@@ -20,10 +20,10 @@ def read_requirements():
 
 setup(
     name='mehc-curation',
-    version='1.0.0',
+    version='1.0.1',
     author='Thanh-Hoang Nguyen-Vo',
     author_email='nvthoang@gmail.com',
-    description='A comprehensive toolkit for SMILES molecular data curation, validation, cleaning, and normalization',
+    description='A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
     url='https://github.com/biochem-data-sci/mehc-curation',
@@ -58,4 +58,3 @@ setup(
         'Documentation': 'https://github.com/biochem-data-sci/mehc-curation#readme',
     },
 )
-

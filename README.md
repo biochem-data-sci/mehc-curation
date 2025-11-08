@@ -157,7 +157,7 @@ If you use this library in your research, please cite:
   author={Chinh Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
   month={dec},
   year={2025},
-  version={1.0.0},
+  version={1.0.1},
   url={https://github.com/biochem-data-sci/mehc-curation},
   license={MIT},
   doi={10.5281/zenodo.17561290}, 
@@ -172,4 +172,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For issues and questions, please open an issue on [GitHub](https://github.com/biochem-data-sci/mehc-curation/issues).
+
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mehc-curation"
 version = "1.0.0"
-description = "A comprehensive toolkit for SMILES molecular data curation, validation, cleaning, and normalization"
+description = "A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization"
 readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "MIT"}
@@ -55,5 +55,6 @@ packages = ["validation", "cleaning", "normalization", "refinement", "utils"]
 
 [tool.setuptools.package-data]
 "*" = ["template_report/*.txt", "dat/*.txt"]
+
 
 

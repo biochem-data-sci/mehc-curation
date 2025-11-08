@@ -8,7 +8,7 @@ def read_readme():
     if os.path.exists(readme_path):
         with open(readme_path, 'r', encoding='utf-8') as f:
             return f.read()
-    return "MEHC Curation - A comprehensive toolkit for SMILES molecular data curation"
+    return "MEHC-curation: An Automated Python Framework for High-Quality Molecular Dataset Preparation"
 
 # Read requirements
 def read_requirements():
@@ -58,3 +58,4 @@ setup(
         'Documentation': 'https://github.com/biochem-data-sci/mehc-curation#readme',
     },
 )
+

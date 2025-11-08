@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Thanh-Hoang Nguyen-Vo", email = "nvthoang@gmail.com"}
 ]
 keywords = ["chemistry", "SMILES", "molecular data", "validation", "cleaning", "normalization", "cheminformatics", "RDKit"]
 classifiers = [
@@ -55,4 +55,5 @@ packages = ["validation", "cleaning", "normalization", "refinement", "utils"]
 
 [tool.setuptools.package-data]
 "*" = ["template_report/*.txt", "dat/*.txt"]
+
 

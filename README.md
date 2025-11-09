@@ -1,6 +1,6 @@
 # MEHC Curation
 
-A comprehensive Python toolkit for SMILES molecular data curation, including validation, cleaning, normalization, and refinement pipelines.
+A comprehensive Python toolkit for molecular data curation, including validation, cleaning, normalization, and refinement pipelines.
 
 ## Features
 
@@ -172,5 +172,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For issues and questions, please open an issue on [GitHub](https://github.com/biochem-data-sci/mehc-curation/issues).
+
 
 

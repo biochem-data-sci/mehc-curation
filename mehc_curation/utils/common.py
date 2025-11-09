@@ -59,6 +59,9 @@ def deduplicate(
     ParallelPandas.initialize(n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True)
     
     get_output = output_dir is not None
+    report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
+    if get_output or get_report:
+        os.makedirs(report_root, exist_ok=True)
     
     # Validate if requested (avoid circular import)
     validate_format_data = {}
@@ -173,12 +176,12 @@ Unique SMILES: {format_data['validation_unique']}
     # Save outputs
     if get_output:
         from .report_utils import GetReport
-        report_generator = GetReport(output_dir=output_dir, report_subdir_name="deduplicate")
+        report_generator = GetReport(output_dir=report_root, report_subdir_name="deduplicate")
         report_generator.create_csv_file(cleaned_df, csv_file_name="post_duplicates_removed.csv")
     
     if get_report:
         from .report_utils import GetReport
-        report_generator = GetReport(output_dir=output_dir, report_subdir_name="deduplicate")
+        report_generator = GetReport(output_dir=report_root, report_subdir_name="deduplicate")
         report_generator.create_report_file(report_file_name="deduplicate.txt", content=formatted_report)
         report_generator.create_csv_file(dups_info, csv_file_name="duplicated_smiles_include_idx.csv")
     

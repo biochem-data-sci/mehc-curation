@@ -1,7 +1,7 @@
 """Report generation utilities."""
 import os
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class GetReport:
@@ -13,16 +13,18 @@ class GetReport:
         report_subdir_name (str): The name of the subdirectory for the report files.
     """
 
-    def __init__(self, output_dir: str, report_subdir_name: str):
+    def __init__(self, output_dir: Optional[str], report_subdir_name: str):
         """
         Initialize the GetReport class with output directory and subdirectory name.
 
         Args:
-            output_dir (str): The directory where the report will be stored.
+            output_dir (str | None): The directory where the report will be stored.
+                If ``None``, the current working directory is used.
             report_subdir_name (str): The name of the subdirectory where reports will be saved.
-                                    Examples: "deduplicate", "validate", "remove_mixtures"
+                Examples: ``"deduplicate"``, ``"validate"``, ``"remove_mixtures"``.
         """
-        self.output_dir = output_dir
+        self.output_dir = os.path.abspath(output_dir) if output_dir else os.getcwd()
+        os.makedirs(self.output_dir, exist_ok=True)
         self.report_subdir_name = report_subdir_name
 
     def _ensure_directory_exists(self):

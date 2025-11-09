@@ -1,4 +1,5 @@
 """Output management for normalization operations."""
+import os
 import pandas as pd
 from typing import Optional
 
@@ -9,6 +10,8 @@ class NormalizationOutputManager:
     def __init__(self, output_dir: Optional[str]):
         self.output_dir = output_dir
         self.get_output = output_dir is not None
+        self.report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
+        os.makedirs(self.report_root, exist_ok=True)
     
     def save_step_outputs(self, config, normalized_smi: pd.DataFrame, 
                          diff_data: pd.DataFrame,
@@ -20,14 +23,14 @@ class NormalizationOutputManager:
         # Save main output
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             ).create_csv_file(normalized_smi, csv_file_name=config.output_csv)
         
         # Save detailed reports
         if get_report:
             report_gen = GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             )
             
@@ -45,7 +48,7 @@ class NormalizationOutputManager:
                     dup_subdir = "cleaning_salts"  # Preserve original bug
                 
                 GetReport(
-                    output_dir=self.output_dir,
+                    output_dir=self.report_root,
                     report_subdir_name=dup_subdir,
                 ).create_csv_file(
                     dup_idx_data, csv_file_name="duplicate_index_data.csv"
@@ -60,13 +63,13 @@ class NormalizationOutputManager:
         
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="tautomer_and_stereoisomer_normalization",
             ).create_csv_file(smi_df, csv_file_name="post_normalized_smiles.csv")
         
         if get_report:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="tautomer_and_stereoisomer_normalization",
             ).create_report_file(
                 report_file_name="tautomer_and_stereoisomer_normalization_report.txt",
@@ -75,7 +78,7 @@ class NormalizationOutputManager:
             
             if param_deduplicate:
                 GetReport(
-                    output_dir=self.output_dir,
+                    output_dir=self.report_root,
                     report_subdir_name="complete_validation",  # Preserve original bug
                 ).create_csv_file(
                     dup_idx_data, csv_file_name="duplicate_index_data.csv"

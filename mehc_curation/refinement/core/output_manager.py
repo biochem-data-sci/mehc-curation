@@ -1,4 +1,5 @@
 """Output management for refinement operations."""
+import os
 import pandas as pd
 from typing import Optional
 
@@ -10,6 +11,8 @@ class RefinementOutputManager:
         self.output_dir = output_dir
         self.config = config
         self.get_output = output_dir is not None
+        self.report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
+        os.makedirs(self.report_root, exist_ok=True)
     
     def save_refinement_outputs(
         self,
@@ -26,14 +29,14 @@ class RefinementOutputManager:
         # Save main output
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=self.config.report_subdir,
             ).create_csv_file(smi_df, csv_file_name=self.config.output_csv)
         
         # Save detailed reports
         if get_report:
             report_gen = GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=self.config.report_subdir,
             )
             

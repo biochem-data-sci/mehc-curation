@@ -1,4 +1,5 @@
 """Output management for cleaning operations."""
+import os
 import pandas as pd
 from typing import Optional
 
@@ -9,6 +10,8 @@ class CleaningOutputManager:
     def __init__(self, output_dir: Optional[str]):
         self.output_dir = output_dir
         self.get_output = output_dir is not None
+        self.report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
+        os.makedirs(self.report_root, exist_ok=True)
     
     def save_step_outputs(self, config, cleaned_smi: pd.DataFrame, 
                          diff_data: pd.DataFrame,
@@ -20,14 +23,14 @@ class CleaningOutputManager:
         # Save main output
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             ).create_csv_file(cleaned_smi, csv_file_name=config.output_csv)
         
         # Save detailed reports
         if get_report:
             report_gen = GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             )
             
@@ -52,13 +55,13 @@ class CleaningOutputManager:
         
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="cleaning_salts_and_neutralizing_smiles",
             ).create_csv_file(smi_df, csv_file_name="post_cleaned_and_neutralized_smiles.csv")
         
         if get_report:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="cleaning_salts_and_neutralizing_smiles",
             ).create_report_file(
                 report_file_name="cleaning_salts_and_neutralizing_smiles_report.txt",
@@ -67,7 +70,7 @@ class CleaningOutputManager:
             
             if param_deduplicate:
                 GetReport(
-                    output_dir=self.output_dir,
+                    output_dir=self.report_root,
                     report_subdir_name="cleaning_salts_and_neutralizing_smiles",
                 ).create_csv_file(
                     dup_idx_data, csv_file_name="duplicate_index_data.csv"

@@ -136,6 +136,11 @@ refiner.complete_refinement(n_cpu=4)
 refiner.complete_refinement(n_cpu=1)
 ```
 
+### Output Directories
+
+- `output_dir` is optional for every stage. If you omit it, data stays in memory and any generated reports are written to the current working directory.
+- When you do provide an `output_dir`, the folder will be created automatically if it does not exist, and both CSV outputs and reports are saved beneath it.
+
 ## Requirements
 
 - Python >= 3.7
@@ -157,7 +162,7 @@ If you use this library in your research, please cite:
   author={Chinh Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
   month={dec},
   year={2025},
-  version={1.0.2},
+  version={1.0.3},
   url={https://github.com/biochem-data-sci/mehc-curation},
   license={MIT},
   doi={10.5281/zenodo.17562247}, 

@@ -1,0 +1,44 @@
+\begin{table}[htbp]
+\centering
+\caption{Parameters for \texttt{MEHC-curation} pipelines after the restructure.}
+\begin{tabular}{lllll}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Default} & \textbf{Description} & \textbf{Stage} \\
+\midrule
+\multicolumn{5}{l}{\textit{Stage control parameters}} \\
+validate & bool & True & Run validation before the current step or pipeline & V,C,N,R \\
+rm\_mixture & bool & True & Remove mixtures during the refinement workflow & R \\
+rm\_inorganic & bool & True & Remove inorganic compounds during refinement & R \\
+rm\_organometallic & bool & True & Remove organometallic compounds during refinement & R \\
+cl\_salt & bool & True & Execute salt cleaning within refinement & R \\
+neutralize & bool & True & Execute charge neutralization within refinement & R \\
+destereoisomerize & bool & True & Normalize stereochemistry within refinement & R \\
+detautomerize & bool & True & Standardize tautomers within refinement & R \\
+validate\_post\_neutr & bool & True & Re-validate SMILES after neutralization & R \\
+rm\_dup\_between\_stages & bool & True & Remove duplicates between refinement stages & R \\
+param\_deduplicate & bool & False & Remove duplicates after a step (True for \texttt{complete\_validation}) & V,C,N,R \\
+\multicolumn{5}{l}{\textit{Reporting and return options}} \\
+return\_format\_data & bool & False & Return template formatting data for reports & V,C,N,R \\
+get\_diff & bool & False & Return diff tables for normalization/cleaning steps & C,N \\
+get\_invalid\_smi\_idx & bool & False & Return indices of invalid SMILES & V \\
+get\_isomeric\_smi & bool & True & Preserve isomeric SMILES during validation & V \\
+show\_dup\_smi\_and\_idx & bool & False & Return duplicate SMILES with indices (utility \texttt{deduplicate}) & U \\
+\multicolumn{5}{l}{\textit{Method configuration}} \\
+method & str & ``boyle'' & Neutralization method for \texttt{neutralize} step & C \\
+neutralizing\_method & str & ``boyle'' & Neutralization method for complete cleaning/refinement & C,R \\
+\multicolumn{5}{l}{\textit{Output and logging}} \\
+output\_dir & str & None & Directory for CSV/report outputs & V,C,N,R,U \\
+get\_report & bool & False & Persist rendered text reports & V,C,N,R,U \\
+print\_logs & bool & True & Print formatted report content to console & V,C,N,R,U \\
+\multicolumn{5}{l}{\textit{Parallel processing}} \\
+n\_cpu & int & $-1$ & Number of CPU cores ($-1$ uses all available cores) & V,C,N,R,U \\
+split\_factor & int & 1 & Data partition factor for parallel processing (None for \texttt{destereoisomerize}) & V,C,N,R,U \\
+partial\_dup\_cols & list & None & Columns used to detect partial duplicates & V,C,N,R,U \\
+\bottomrule
+\end{tabular}
+\vspace{0.5em}
+\begin{minipage}{0.9\linewidth}
+\footnotesize Stage codes: V = Validation, C = Cleaning, N = Normalization, R = Refinement, U = Shared utility (\texttt{deduplicate}).
+\end{minipage}
+\end{table}
+

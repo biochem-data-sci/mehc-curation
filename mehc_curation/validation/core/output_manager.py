@@ -1,4 +1,5 @@
 """Output management for validation operations."""
+import os
 import pandas as pd
 from typing import Optional
 
@@ -9,6 +10,8 @@ class ValidationOutputManager:
     def __init__(self, output_dir: Optional[str]):
         self.output_dir = output_dir
         self.get_output = output_dir is not None
+        self.report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
+        os.makedirs(self.report_root, exist_ok=True)
     
     def save_step_outputs(self, config, valid_smi: pd.DataFrame, 
                          invalid_smi: pd.Series, formatted_report: str,
@@ -19,14 +22,14 @@ class ValidationOutputManager:
         # Save main output
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             ).create_csv_file(valid_smi, csv_file_name=config.output_csv)
         
         # Save detailed reports
         if get_report:
             report_gen = GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name=config.report_subdir,
             )
             
@@ -49,7 +52,7 @@ class ValidationOutputManager:
                     dup_subdir = "check_valid_smiles"
                 
                 GetReport(
-                    output_dir=self.output_dir,
+                    output_dir=self.report_root,
                     report_subdir_name=dup_subdir,
                 ).create_csv_file(
                     dup_idx_data, csv_file_name="duplicate_index_data.csv"
@@ -64,13 +67,13 @@ class ValidationOutputManager:
         
         if self.get_output:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="complete_validation",
             ).create_csv_file(smi_df, csv_file_name="output_smiles.csv")
         
         if get_report:
             GetReport(
-                output_dir=self.output_dir,
+                output_dir=self.report_root,
                 report_subdir_name="complete_validation",
             ).create_report_file(
                 report_file_name="complete_validation.txt",
@@ -79,7 +82,7 @@ class ValidationOutputManager:
             
             if param_deduplicate:
                 GetReport(
-                    output_dir=self.output_dir,
+                    output_dir=self.report_root,
                     report_subdir_name="complete_validation",
                 ).create_csv_file(
                     dup_idx_data, csv_file_name="duplicate_index_data.csv"

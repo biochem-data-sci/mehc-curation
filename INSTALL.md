@@ -63,15 +63,29 @@ pip install mehc-curation
 
 ## Verifying Installation
 
-After installation, verify that everything works:
+After installation, you can run a quick smoke test to confirm imports and optional output handling:
 
 ```python
 import pandas as pd
 from mehc_curation.validation import ValidationStage
+from mehc_curation.utils.common import deduplicate
 
-# Test import
+# Minimal DataFrame
 df = pd.DataFrame({'smiles': ['CCO', 'CC']})
 validator = ValidationStage(df)
+
+# Deduplication without an output directory (keeps data in memory)
+cleaned = deduplicate(df, output_dir=None, print_logs=False)
+
+# Deduplication with automatic directory creation
+cleaned_with_reports, _ = deduplicate(
+    df,
+    output_dir="mehc_outputs/demo",
+    print_logs=False,
+    get_report=True,
+    return_format_data=True,
+)
+
 print("Installation successful!")
 ```
 

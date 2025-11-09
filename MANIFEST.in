@@ -1,8 +1,8 @@
 # Include template report files
-include template_report/*.txt
+include mehc_curation/template_report/*.txt
 
 # Include data files
-include dat/*.txt
+include mehc_curation/dat/*.txt
 
 # Include README and license
 include README.md

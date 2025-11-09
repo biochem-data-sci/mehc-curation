@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mehc-curation"
-version = "1.0.1"
+version = "1.0.2"
 description = "A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -45,17 +45,16 @@ Repository = "https://github.com/biochem-data-sci/mehc-curation"
 "Bug Tracker" = "https://github.com/biochem-data-sci/mehc-curation/issues"
 
 [project.scripts]
-mehc-validation = "validation.__main__:main"
-mehc-cleaning = "cleaning.__main__:main"
-mehc-normalization = "normalization.__main__:main"
-mehc-refinement = "refinement.__main__:main"
+mehc-validation = "mehc_curation.validation.__main__:main"
+mehc-cleaning = "mehc_curation.cleaning.__main__:main"
+mehc-normalization = "mehc_curation.normalization.__main__:main"
+mehc-refinement = "mehc_curation.refinement.__main__:main"
 
-[tool.setuptools]
-packages = ["validation", "cleaning", "normalization", "refinement", "utils"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mehc_curation*"]
+exclude = ["build*", "dist*", "tests*"]
 
 [tool.setuptools.package-data]
-"*" = ["template_report/*.txt", "dat/*.txt"]
-
-
-
+"mehc_curation" = ["template_report/*.txt", "dat/*.txt"]
 

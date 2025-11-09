@@ -67,7 +67,7 @@ After installation, verify that everything works:
 
 ```python
 import pandas as pd
-from mehc_curation import ValidationStage
+from mehc_curation.validation import ValidationStage
 
 # Test import
 df = pd.DataFrame({'smiles': ['CCO', 'CC']})

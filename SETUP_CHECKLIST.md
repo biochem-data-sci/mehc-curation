@@ -42,10 +42,10 @@ Before publishing to PyPI, complete the following:
 
 2. **Test imports**:
    ```python
-   from validation import ValidationStage
-   from cleaning import CleaningStage
-   from normalization import NormalizationStage
-   from refinement import RefinementStage
+   from mehc_curation.validation import ValidationStage
+   from mehc_curation.cleaning import CleaningStage
+   from mehc_curation.normalization import NormalizationStage
+   from mehc_curation.refinement import RefinementStage
    ```
 
 3. **Test CLI commands**:
@@ -69,7 +69,7 @@ Before publishing to PyPI, complete the following:
 ## Important Notes
 
 - **RDKit dependency**: RDKit is NOT included in `requirements.txt` because it should be installed via conda. Users must install it separately.
-- **Package structure**: The package uses `find_packages()` to automatically discover all subpackages (validation, cleaning, normalization, refinement, utils).
+- **Package structure**: The package uses `find_packages()` to automatically discover all subpackages under `mehc_curation` (validation, cleaning, normalization, refinement, utils).
 - **Data files**: Template and data files are included via `MANIFEST.in`.
 
 ## Next Steps

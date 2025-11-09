@@ -20,14 +20,14 @@ def read_requirements():
 
 setup(
     name='mehc-curation',
-    version='1.0.1',
+    version='1.0.2',
     author='Thanh-Hoang Nguyen-Vo',
     author_email='nvthoang@gmail.com',
     description='A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
     url='https://github.com/biochem-data-sci/mehc-curation',
-    packages=find_packages(),
+    packages=find_packages(include=["mehc_curation", "mehc_curation.*"]),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -45,10 +45,10 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'mehc-validation=validation.__main__:main',
-            'mehc-cleaning=cleaning.__main__:main',
-            'mehc-normalization=normalization.__main__:main',
-            'mehc-refinement=refinement.__main__:main',
+            'mehc-validation=mehc_curation.validation.__main__:main',
+            'mehc-cleaning=mehc_curation.cleaning.__main__:main',
+            'mehc-normalization=mehc_curation.normalization.__main__:main',
+            'mehc-refinement=mehc_curation.refinement.__main__:main',
         ],
     },
     keywords='chemistry, SMILES, molecular data, validation, cleaning, normalization, cheminformatics, RDKit',

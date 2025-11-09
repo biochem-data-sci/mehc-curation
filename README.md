@@ -41,10 +41,10 @@ pip install -e .
 
 ```python
 import pandas as pd
-from validation import ValidationStage
-from cleaning import CleaningStage
-from normalization import NormalizationStage
-from refinement import RefinementStage
+from mehc_curation.validation import ValidationStage
+from mehc_curation.cleaning import CleaningStage
+from mehc_curation.normalization import NormalizationStage
+from mehc_curation.refinement import RefinementStage
 
 # Load your SMILES data
 df = pd.read_csv("your_data.csv")
@@ -73,16 +73,16 @@ refined_df = refiner.complete_refinement(
 
 ```bash
 # Validation
-python -m validation -i input.csv -o output/ -c 5
+python -m mehc_curation.validation -i input.csv -o output/ -c 5
 
 # Cleaning
-python -m cleaning -i input.csv -o output/ -c 3
+python -m mehc_curation.cleaning -i input.csv -o output/ -c 3
 
 # Normalization
-python -m normalization -i input.csv -o output/ -c 3
+python -m mehc_curation.normalization -i input.csv -o output/ -c 3
 
 # Complete refinement
-python -m refinement -i input.csv -o output/ --get_report
+python -m mehc_curation.refinement -i input.csv -o output/ --get_report
 ```
 
 ## Modules
@@ -157,7 +157,7 @@ If you use this library in your research, please cite:
   author={Chinh Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
   month={dec},
   year={2025},
-  version={1.0.1},
+  version={1.0.2},
   url={https://github.com/biochem-data-sci/mehc-curation},
   license={MIT},
   doi={10.5281/zenodo.17561290}, 
@@ -172,6 +172,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For issues and questions, please open an issue on [GitHub](https://github.com/biochem-data-sci/mehc-curation/issues).
-
-
 

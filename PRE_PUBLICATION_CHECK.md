@@ -46,15 +46,12 @@
 - ✅ All `.pyo` files removed
 - ✅ Build/dist directories cleaned (if existed)
 
-## ⚠️ Items Requiring Manual Update
+## ✅ Manual Updates Confirmed
 
 ### Author Information
-The following files still contain placeholder author information:
-- `setup.py` (lines 24-25): `author='Your Name'`, `author_email='your.email@example.com'`
-- `pyproject.toml` (line 13): `{name = "Your Name", email = "your.email@example.com"}`
-- `README.md` (line 157): Citation author field
-
-**Action Required**: Update with actual author name and email before publishing.
+- `setup.py` lists author `Thanh-Hoang Nguyen-Vo <nvthoang@gmail.com>`
+- `pyproject.toml` authors table updated with the same name and email
+- `README.md` citation block lists the full research author set
 
 ## 📝 Notes
 
@@ -81,7 +78,7 @@ After updating author information, the package is ready for:
 - [ ] Update author information in setup.py, pyproject.toml, and README.md
 - [ ] Review all files one final time
 - [ ] Test local installation: `pip install -e .`
-- [ ] Test imports: `from validation import ValidationStage` (etc.)
+- [ ] Test imports: `from mehc_curation.validation import ValidationStage` (etc.)
 - [ ] Commit changes: `git add .` and `git commit -m "Prepare for publication"`
 - [ ] Push to GitHub: `git push origin main`
 

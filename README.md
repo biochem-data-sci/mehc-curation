@@ -161,16 +161,15 @@ MIT License - see LICENSE file for details
 If you use this library in your research, please cite:
 
 ```bibtex
-@software{mehc_curation,
-  title={MEHC-curation: An Automated Python Framework for High-Quality Molecular Dataset Preparation},
-  author={Chinh Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
+@article{mehc_curation,
+  title={MEHC-Curation: A Python Framework for High-Quality Molecular Dataset Curation},
+  author={Chinh T. Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
+  doi={}
   month={dec},
+  journal={ChemRxiv},
+  publisher={ChemRxiv},  
   year={2025},
-  version={1.0.5},
   url={https://github.com/biochem-data-sci/mehc-curation},
-  license={MIT},
-  doi={10.5281/zenodo.17567530}, 
-  publisher={Zenodo}
 }
 ```
 

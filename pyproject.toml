@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mehc-curation"
-version = "1.0.3"
+version = "1.0.4"
 description = "A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization"
 readme = "README.md"
 requires-python = ">=3.7"

@@ -64,7 +64,11 @@ class CleaningPipeline:
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
-        param_deduplicate: bool = False,
+        param_deduplicate: bool = True,
+        get_report: bool = False,
+        param_deduplicate: bool = True,
+        get_report: bool = False,
+        param_deduplicate: bool = True,
         n_cpu: int = -1,
         split_factor: int = 1,
         partial_dup_cols: list = None
@@ -146,7 +150,7 @@ class CleaningPipeline:
         print_logs = params.get('print_logs', True)
         get_report = params.get('get_report', False)
         get_diff = params.get('get_diff', False)
-        param_deduplicate = params.get('param_deduplicate', False)
+        param_deduplicate = params.get('param_deduplicate', True)
         return_format_data = params.get('return_format_data', False)
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)

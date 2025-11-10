@@ -27,7 +27,7 @@ class ValidationPipeline:
         get_report: bool = False,
         get_invalid_smi_idx: bool = False,
         get_isomeric_smi: bool = True,
-        param_deduplicate: bool = False,
+        param_deduplicate: bool = True,
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
@@ -45,7 +45,7 @@ class ValidationPipeline:
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        param_deduplicate: bool = False,
+        param_deduplicate: bool = True,
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
@@ -63,7 +63,7 @@ class ValidationPipeline:
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        param_deduplicate: bool = False,
+        param_deduplicate: bool = True,
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
@@ -81,7 +81,7 @@ class ValidationPipeline:
         get_invalid_smi_idx: bool = False,
         print_logs: bool = True,
         get_report: bool = False,
-        param_deduplicate: bool = False,
+        param_deduplicate: bool = True,
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
@@ -205,7 +205,7 @@ class ValidationPipeline:
         get_report = params.get('get_report', False)
         get_invalid_smi_idx = params.get('get_invalid_smi_idx', False)
         get_isomeric_smi = params.get('get_isomeric_smi', True)
-        param_deduplicate = params.get('param_deduplicate', False)
+        param_deduplicate = params.get('param_deduplicate', True)
         return_format_data = params.get('return_format_data', False)
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)

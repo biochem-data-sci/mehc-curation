@@ -93,7 +93,7 @@ pip install mehc-curation
 For future releases, follow semantic versioning:
 - **MAJOR** (1.0.0 → 2.0.0): Breaking changes
 - **MINOR** (1.0.0 → 1.1.0): New features, backward compatible
-- **PATCH** (1.0.2 → 1.0.3): Bug fixes
+- **PATCH** (1.0.3 → 1.0.4): Bug fixes
 
 Update version in both `setup.py` and `pyproject.toml`, then rebuild and upload.
 

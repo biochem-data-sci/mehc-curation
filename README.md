@@ -169,7 +169,7 @@ If you use this library in your research, please cite:
   version={1.0.4},
   url={https://github.com/biochem-data-sci/mehc-curation},
   license={MIT},
-  doi={10.5281/zenodo.17566673}, 
+  doi={10.5281/zenodo.17567530}, 
   publisher={Zenodo}
 }
 ```

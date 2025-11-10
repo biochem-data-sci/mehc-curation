@@ -20,7 +20,7 @@ def read_requirements():
 
 setup(
     name='mehc-curation',
-    version='1.0.4',
+    version='1.0.5',
     author='Thanh-Hoang Nguyen-Vo',
     author_email='nvthoang@gmail.com',
     description='A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization',

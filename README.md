@@ -166,7 +166,7 @@ If you use this library in your research, please cite:
   author={Chinh Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
   month={dec},
   year={2025},
-  version={1.0.4},
+  version={1.0.5},
   url={https://github.com/biochem-data-sci/mehc-curation},
   license={MIT},
   doi={10.5281/zenodo.17567530}, 

@@ -164,12 +164,12 @@ If you use this library in your research, please cite:
 @article{mehc_curation,
   title={MEHC-Curation: A Python Framework for High-Quality Molecular Dataset Curation},
   author={Chinh T. Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
-  doi={}
+  doi={},
+  url={},
   month={dec},
   journal={ChemRxiv},
   publisher={ChemRxiv},  
   year={2025},
-  url={https://github.com/biochem-data-sci/mehc-curation},
 }
 ```
 

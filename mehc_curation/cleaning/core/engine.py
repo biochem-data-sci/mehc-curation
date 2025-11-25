@@ -32,18 +32,23 @@ class CleaningEngine:
         setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs['cl_salt']
         smi_col = df.columns.tolist()
-        
-        # Apply salt cleaning
+
         salts_cleaned = df[smi_col[0]].p_apply(
             lambda x: SMILESCleaner(x, return_dif=True).clean_salt(
                 return_is_null_smi=True
             )
         )
+
+        # salts_cleaned = df[smi_col[0]].p_apply(
+        #     lambda x: pd.Series(SMILESCleaner(x, return_dif=True).clean_salt(
+        #         return_is_null_smi=True
+        #     ))
+        # )
         
         # Extract results
         post_salts_cl_smi_data = pd.DataFrame(
             list(salts_cleaned.p_apply(lambda x: x[0])),
-            columns=["post_smiles"],
+            columns=["post_smiles"]
         )
         diff_after_cl_salt = pd.DataFrame(
             list(salts_cleaned.p_apply(lambda x: x[1])), columns=["diff"]
@@ -51,14 +56,42 @@ class CleaningEngine:
         is_missing_smi_str = pd.DataFrame(
             list(salts_cleaned.p_apply(lambda x: x[2])), columns=["is_missing"]
         )
-        
+
+        # post_salts_cl_smi_data = pd.DataFrame(
+        #     list(salts_cleaned.p_apply(lambda x: x[0])),
+        #     columns=["post_smiles"],
+        #     index=df.index  # Preserve original index
+        # )
+        # diff_after_cl_salt = pd.DataFrame(
+        #     list(salts_cleaned.p_apply(lambda x: x[1])), columns=["diff"], 
+        #     index=df.index  # Preserve original index
+        # )
+        # is_missing_smi_str = pd.DataFrame(
+        #     list(salts_cleaned.p_apply(lambda x: x[2])), columns=["is_missing"], 
+        #     index=df.index  # Preserve original index
+        # )
+
+        post_salts_cl_smi_data.index = salts_cleaned.index
+        diff_after_cl_salt.index = salts_cleaned.index
+        is_missing_smi_str.index = salts_cleaned.index
+         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_salts_cl_smi_data.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #         diff_after_cl_salt.reset_index(drop=True),
+        #         is_missing_smi_str.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
+
         post_smi_df = pd.concat(
             [
-                post_salts_cl_smi_data.reset_index(drop=True),
-                df.reset_index(drop=True),
-                diff_after_cl_salt.reset_index(drop=True),
-                is_missing_smi_str.reset_index(drop=True),
+                post_salts_cl_smi_data,
+                df,
+                diff_after_cl_salt,
+                is_missing_smi_str,
             ],
             axis=1,
         )
@@ -106,6 +139,10 @@ class CleaningEngine:
         neutralized = df[smi_col[0]].p_apply(
             lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(method=method)
         )
+
+        # neutralized = df[smi_col[0]].p_apply(
+        #     lambda x: pd.Series(SMILESCleaner(x, return_dif=True).neutralize_salt(method=method))
+        # )
         
         # Extract results
         post_neutralized_smi_data = pd.DataFrame(
@@ -115,13 +152,35 @@ class CleaningEngine:
         diff_after_neutralize = pd.DataFrame(
             list(neutralized.p_apply(lambda x: x[1])), columns=["diff"]
         )
+
+        # post_neutralized_smi_data = pd.DataFrame(
+        #     list(neutralized.p_apply(lambda x: x[0])),
+        #     columns=["neutralized_smiles"],
+        #     index=df.index  # Preserve original index
+        # )
+        # diff_after_neutralize = pd.DataFrame(
+        #     list(neutralized.p_apply(lambda x: x[1])), columns=["diff"],
+        #     index=df.index  # Preserve original index
+        # )
+
+        post_neutralized_smi_data.index = neutralized.index
+        diff_after_neutralize.index = neutralized.index
         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_neutralized_smi_data.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #         diff_after_neutralize.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
+
         post_smi_df = pd.concat(
             [
-                post_neutralized_smi_data.reset_index(drop=True),
-                df.reset_index(drop=True),
-                diff_after_neutralize.reset_index(drop=True),
+                post_neutralized_smi_data,
+                df,
+                diff_after_neutralize,
             ],
             axis=1,
         )

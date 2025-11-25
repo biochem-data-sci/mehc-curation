@@ -178,7 +178,6 @@ class ValidationPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            self.smi_df = self.smi_df.reset_index(drop=True)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)
@@ -256,7 +255,6 @@ class ValidationPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            valid_smi = valid_smi.reset_index(drop=True)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)

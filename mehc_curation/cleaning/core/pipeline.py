@@ -81,6 +81,7 @@ class CleaningPipeline:
             from ...validation import ValidationStage
             self.smi_df, validation_format_data = ValidationStage(self.smi_df).validate_smi(
                 print_logs=False,
+                param_deduplicate=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
@@ -119,7 +120,7 @@ class CleaningPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            self.smi_df = self.smi_df.reset_index(drop=True)
+            # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)
@@ -208,7 +209,7 @@ class CleaningPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            cleaned_smi = cleaned_smi.reset_index(drop=True)
+            # cleaned_smi = cleaned_smi.reset_index(drop=True)
             self.smi_df = cleaned_smi
         
         # Finalize template

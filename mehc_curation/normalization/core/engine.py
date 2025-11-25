@@ -46,12 +46,22 @@ class NormalizationEngine:
         diff_after_detautomerized = pd.DataFrame(
             list(post_detautomerized.p_apply(lambda x: x[1])), columns=["diff"]
         )
+
+        post_detautomerized_smi_df.index = post_detautomerized.index
+        diff_after_detautomerized.index = post_detautomerized.index
         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_detautomerized_smi_df.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
         post_smi_df = pd.concat(
             [
-                post_detautomerized_smi_df.reset_index(drop=True),
-                df.reset_index(drop=True),
+                post_detautomerized_smi_df,
+                df,
             ],
             axis=1,
         )
@@ -103,12 +113,22 @@ class NormalizationEngine:
             list(post_destereoisomerized.p_apply(lambda x: x[1])),
             columns=["diff"],
         )
+
+        post_destereoisomerized_smi_df.index = post_destereoisomerized.index
+        diff_after_destereoisomerized.index = post_destereoisomerized.index
         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_destereoisomerized_smi_df.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
         post_smi_df = pd.concat(
             [
-                post_destereoisomerized_smi_df.reset_index(drop=True),
-                df.reset_index(drop=True),
+                post_destereoisomerized_smi_df,
+                df,
             ],
             axis=1,
         )

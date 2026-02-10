@@ -1,5 +1,5 @@
 # MEHC-CURATION
-_This tool is developed by Chinh Pham Trong, Huy-Quang Trinh and Thanh-Hoang Nguyen Vo*._
+_This tool is developed by Chinh Pham Trong, Nhat-Anh Nguyen-Dang, Thanh-Hoang Nguyen-Vo and Binh P. Nguyen*._
 
 ## 1. General
 

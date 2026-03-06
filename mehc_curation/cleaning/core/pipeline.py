@@ -41,7 +41,7 @@ class CleaningPipeline:
     def neutralize(
         self,
         validate: bool = True,
-        method: str = "boyle",
+        neutralizing_method: str = "boyle",
         output_dir: str = None,
         print_logs: bool = True,
         get_report: bool = False,
@@ -54,7 +54,7 @@ class CleaningPipeline:
     ) -> Any:
         """Neutralize SMILES - exact replica of original method."""
         return self._run_cleaning_step(
-            'neutralize', locals(), validate_first=validate, method=method
+            'neutralize', locals(), validate_first=validate, neutralizing_method=neutralizing_method
         )
     
     def complete_cleaning(
@@ -98,7 +98,7 @@ class CleaningPipeline:
         
         # Run neutralization
         self.smi_df, diff_after_neutralizing, neutralizing_format_data = self.engine.run_neutralization(
-            self.smi_df, method=neutralizing_method, n_cpu=n_cpu, split_factor=split_factor
+            self.smi_df, neutralizing_method=neutralizing_method, n_cpu=n_cpu, split_factor=split_factor
         )
         format_data.update(neutralizing_format_data)
         template_report = self.template_manager.add_neutralization_section(template_report)
@@ -137,7 +137,7 @@ class CleaningPipeline:
         return self.smi_df
     
     def _run_cleaning_step(self, step_name: str, method_params: dict, 
-                          validate_first: bool = True, method: str = None) -> Any:
+                          validate_first: bool = True, neutralizing_method: str = None) -> Any:
         """Generic method to run cleaning steps - preserves exact original behavior."""
         # Remove 'self' from params
         params = {k: v for k, v in method_params.items() if k != 'self'}
@@ -175,10 +175,10 @@ class CleaningPipeline:
                 self.engine.run_salt_cleaning(self.smi_df, n_cpu, split_factor)
             format_data.update(step_format_data)
         elif step_name == 'neutralize':
-            if method is None:
-                method = params.get('method', 'boyle')
+            if neutralizing_method is None:
+                neutralizing_method = params.get('neutralizing_method', 'boyle')
             cleaned_smi, diff_data, step_format_data = \
-                self.engine.run_neutralization(self.smi_df, method, n_cpu, split_factor)
+                self.engine.run_neutralization(self.smi_df, neutralizing_method, n_cpu, split_factor)
             format_data.update(step_format_data)
             missing_data = None
         else:

@@ -72,7 +72,7 @@ class SMILESCleaner:
                 return self.smi, False, True
             return self.smi, False, False
     
-    def neutralize_salt(self, method: str = "boyle") -> Tuple[str, Optional[int]]:
+    def neutralize_salt(self, neutralizing_method: str = "boyle") -> Tuple[str, Optional[int]]:
         """
         Neutralize SMILES string using specified method.
         
@@ -102,17 +102,17 @@ class SMILESCleaner:
                         "Try: conda install -c conda-forge rdkit"
                     )
             
-            if method == "boyle":
+            if neutralizing_method == "boyle":
                 # Boyle method: simple charge neutralization
                 mol = rdMolStandardize.Normalize(mol)
                 neutralized_smi = Chem.MolToSmiles(mol)
-            elif method == "rdkit":
+            elif neutralizing_method == "rdkit":
                 # RDKit standardizer
                 normalizer = rdMolStandardize.Normalizer()
                 mol = normalizer.normalize(mol)
                 neutralized_smi = Chem.MolToSmiles(mol)
             else:
-                raise ValueError(f"Unknown method: {method}. Must be 'boyle' or 'rdkit'")
+                raise ValueError(f"Unknown method: {neutralizing_method}. Must be 'boyle' or 'rdkit'")
             
             diff = 1 if (neutralized_smi != self.smi) else 0
             return neutralized_smi, diff

@@ -176,6 +176,7 @@ class RefinementPipeline:
                 self.smi_df
             ).cl_salt(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -188,7 +189,8 @@ class RefinementPipeline:
                 self.smi_df
             ).neutralize(
                 validate=False,
-                method=neutralizing_method,
+                neutralizing_method=neutralizing_method,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -232,6 +234,7 @@ class RefinementPipeline:
                 self.smi_df
             ).destereoisomerize(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -244,6 +247,7 @@ class RefinementPipeline:
                 self.smi_df
             ).detautomerize(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,

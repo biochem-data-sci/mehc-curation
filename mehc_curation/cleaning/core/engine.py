@@ -117,7 +117,7 @@ class CleaningEngine:
         
         return post_smi_df, diff_after_cl_salt, is_missing_smi_str, format_data
     
-    def run_neutralization(self, df: pd.DataFrame, method: str = "boyle",
+    def run_neutralization(self, df: pd.DataFrame, neutralizing_method: str = "boyle",
                           n_cpu: Optional[int] = -1, split_factor: int = 1) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Run neutralization step.
@@ -137,7 +137,7 @@ class CleaningEngine:
         
         # Apply neutralization
         neutralized = df[smi_col[0]].p_apply(
-            lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(method=method)
+            lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(neutralizing_method=neutralizing_method)
         )
 
         # neutralized = df[smi_col[0]].p_apply(

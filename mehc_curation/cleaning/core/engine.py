@@ -102,7 +102,7 @@ class CleaningEngine:
             columns=post_smi_df.columns[[1, -1, -2]], inplace=True
         )
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         missing_smiles_cnt = len(post_salts_cl_smi_data) - len(post_smi_df)
@@ -189,7 +189,7 @@ class CleaningEngine:
         post_smi_df = post_smi_df[pd.notna(post_smi_df["diff"])]
         post_smi_df.drop(columns=post_smi_df.columns[[1, -1]], inplace=True)
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         unprocessable_cnt = len(df) - len(post_smi_df)

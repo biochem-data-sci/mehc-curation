@@ -67,7 +67,7 @@ class NormalizationEngine:
         )
         post_smi_df.drop(columns=post_smi_df.columns[[1]], inplace=True)
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         # Create format data
@@ -134,7 +134,7 @@ class NormalizationEngine:
         )
         post_smi_df.drop(columns=post_smi_df.columns[[1]], inplace=True)
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         # Create format data

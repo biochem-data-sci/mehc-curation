@@ -104,12 +104,13 @@ class SMILESCleaner:
             
             if neutralizing_method == "boyle":
                 # Boyle method: simple charge neutralization
-                mol = rdMolStandardize.Normalize(mol)
+                mol = SMILESCleaner._neutralize_atoms(mol)
                 neutralized_smi = Chem.MolToSmiles(mol)
+
             elif neutralizing_method == "rdkit":
                 # RDKit standardizer
-                normalizer = rdMolStandardize.Normalizer()
-                mol = normalizer.normalize(mol)
+                uncharger = rdMolStandardize.Uncharger()
+                mol = uncharger.uncharge(mol)
                 neutralized_smi = Chem.MolToSmiles(mol)
             else:
                 raise ValueError(f"Unknown method: {neutralizing_method}. Must be 'boyle' or 'rdkit'")
@@ -119,6 +120,22 @@ class SMILESCleaner:
             
         except Exception:
             return self.smi, None
+
+    def _neutralize_atoms(mol):
+        # Adapted in "No charge - A simple approach to neutralising charged molecules" by Boyle (2019)
+        pattern = Chem.MolFromSmarts(
+            "[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
+        at_matches = mol.GetSubstructMatches(pattern)
+        at_matches_list = [y[0] for y in at_matches]
+        if len(at_matches_list) > 0:
+            for at_idx in at_matches_list:
+                atom = mol.GetAtomWithIdx(at_idx)
+                chg = atom.GetFormalCharge()
+                hcount = atom.GetTotalNumHs()
+                atom.SetFormalCharge(0)
+                atom.SetNumExplicitHs(hcount - chg)
+                atom.UpdatePropertyCache()
+        return mol
 
 
 def setup_parallel_processing(n_cpu: Optional[int] = -1, split_factor: int = 1) -> None:

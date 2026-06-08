@@ -8,7 +8,7 @@ def read_readme():
     if os.path.exists(readme_path):
         with open(readme_path, 'r', encoding='utf-8') as f:
             return f.read()
-    return "MEHC-Curation: A Python Framework for High-Quality Molecular Dataset Curation"
+    return 'MEHC-Curation: A Python Framework for High-Quality Molecular Dataset Curation'
 
 # Read requirements
 def read_requirements():
@@ -20,7 +20,7 @@ def read_requirements():
 
 setup(
     name='mehc-curation',
-    version='1.0.5',
+    version='1.0.6',
     author='Thanh-Hoang Nguyen-Vo',
     author_email='nvthoang@gmail.com',
     description='A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization',

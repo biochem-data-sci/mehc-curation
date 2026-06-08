@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mehc-curation"
-version = "1.0.5"
+version = "1.0.6"
 description = "A comprehensive toolkit for molecular data curation, validation, cleaning, and normalization"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -26,8 +26,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "pandas>=1.3.0",
-    "parallel-pandas>=0.2.8",
+    "pandas>=1.3.0,<=2.3.3",
+    "parallel-pandas>=0.2.8,<=0.7",
 ]
 
 [project.optional-dependencies]

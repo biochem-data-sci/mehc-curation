@@ -62,7 +62,7 @@ class GetReport:
         """
         report_subdir_path = self._ensure_directory_exists()
         csv_file_path = os.path.join(report_subdir_path, csv_file_name)
-        smiles_df.to_csv(csv_file_path, index=False, encoding="utf-8")
+        smiles_df.to_csv(csv_file_path, encoding="utf-8")
 
 
 def generate_summary_report(stats: Dict[str, Any], template_path: str = None) -> str:

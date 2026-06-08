@@ -168,7 +168,7 @@ class RefinementPipeline:
                 )
             )
             format_data.update(rm_dup_1st_format_data)
-            self.smi_df = self.smi_df.reset_index(drop=True)
+            # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # ========== STAGE 2: CLEANING ==========
         if cl_salt:
@@ -176,6 +176,7 @@ class RefinementPipeline:
                 self.smi_df
             ).cl_salt(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -188,7 +189,8 @@ class RefinementPipeline:
                 self.smi_df
             ).neutralize(
                 validate=False,
-                method=neutralizing_method,
+                neutralizing_method=neutralizing_method,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -211,7 +213,7 @@ class RefinementPipeline:
                 )
             )
             format_data.update(rm_dup_2nd_format_data)
-            self.smi_df = self.smi_df.reset_index(drop=True)
+            # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # ========== STAGE 3: NORMALIZATION ==========
         if validate_post_neutr:
@@ -232,6 +234,7 @@ class RefinementPipeline:
                 self.smi_df
             ).destereoisomerize(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -244,6 +247,7 @@ class RefinementPipeline:
                 self.smi_df
             ).detautomerize(
                 validate=False,
+                param_deduplicate=False,
                 print_logs=False,
                 return_format_data=True,
                 n_cpu=n_cpu,
@@ -266,7 +270,7 @@ class RefinementPipeline:
                 )
             )
             format_data.update(rm_dup_3rd_format_data)
-            self.smi_df = self.smi_df.reset_index(drop=True)
+            # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # Format the final report
         formatted_report = self.template_manager.format_template(

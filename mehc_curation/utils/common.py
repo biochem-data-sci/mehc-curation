@@ -126,6 +126,7 @@ def deduplicate(
         .p_apply(lambda x: list(x.index))
         .reset_index(name="indexes")
     )
+
     # Merge and drop duplicates - only consider SMILES column, not the indexes column (which contains lists)
     dups_info = dups_info.merge(index_mapping, on=smi_col[0], how="left").drop_duplicates(subset=[smi_col[0]])
     
@@ -194,3 +195,4 @@ Unique SMILES: {format_data['validation_unique']}
         return cleaned_df, format_data
     else:
         return cleaned_df
+    

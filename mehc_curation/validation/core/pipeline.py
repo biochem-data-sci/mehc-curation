@@ -35,7 +35,7 @@ class ValidationPipeline:
     ) -> Any:
         """Validate SMILES - exact replica of original method."""
         return self._run_validation_step(
-            'validate_smi', locals(), validate_first=False
+            'validate_smi', locals(), validate_first=True
         )
     
     def rm_mixture(
@@ -178,7 +178,6 @@ class ValidationPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            self.smi_df = self.smi_df.reset_index(drop=True)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)
@@ -237,7 +236,7 @@ class ValidationPipeline:
         
         # Build template
         template_report = self.template_manager.build_step_template(
-            step_name, include_validation=validate_first and step_name != 'validate_smi'
+            step_name, include_validation=validate_first
         )
         
         # Handle deduplication  
@@ -256,7 +255,6 @@ class ValidationPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
-            valid_smi = valid_smi.reset_index(drop=True)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)

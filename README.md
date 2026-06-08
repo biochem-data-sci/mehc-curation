@@ -161,15 +161,15 @@ MIT License - see LICENSE file for details
 If you use this library in your research, please cite:
 
 ```bibtex
-@article{mehc_curation,
-  title={MEHC-Curation: A Python Framework for High-Quality Molecular Dataset Curation},
-  author={Chinh T. Pham and Nhat-Anh Nguyen-Dang and Thanh-Hoang Nguyen-Vo and Binh P. Nguyen},
-  doi={10.26434/chemrxiv-2025-3x7gq},
-  url={https://chemrxiv.org/engage/chemrxiv/article-details/69119f7cef936fb4a266439e},
-  month={nov},
-  journal={ChemRxiv},
-  publisher={ChemRxiv},  
-  year={2025},
+@article{doi:10.1021/acs.jcim.5c02754,
+author = {Pham, Trong-Chinh and Nguyen-Dang, Nhat-Anh and Nguyen-Vo, Thanh-Hoang and Nguyen, Binh P.},
+title = {MEHC-Curation: A Python Framework for High-Quality Molecular Data Set Curation},
+journal = {Journal of Chemical Information and Modeling},
+volume = {66},
+number = {5},
+pages = {2451-2457},
+year = {2026},
+doi = {10.1021/acs.jcim.5c02754}
 }
 ```
 

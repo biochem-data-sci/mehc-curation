@@ -1,6 +1,6 @@
 # Core dependencies for mehc_curation
-pandas>=1.3.0
-parallel-pandas>=0.2.8
+pandas>=1.3.0,<=2.3.3
+parallel-pandas>=0.2.8,<=0.7
 
 # RDKit - IMPORTANT: RDKit is best installed via conda
 # Install RDKit using conda (recommended):

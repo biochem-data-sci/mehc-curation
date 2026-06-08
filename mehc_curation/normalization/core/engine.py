@@ -46,18 +46,28 @@ class NormalizationEngine:
         diff_after_detautomerized = pd.DataFrame(
             list(post_detautomerized.p_apply(lambda x: x[1])), columns=["diff"]
         )
+
+        post_detautomerized_smi_df.index = post_detautomerized.index
+        diff_after_detautomerized.index = post_detautomerized.index
         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_detautomerized_smi_df.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
         post_smi_df = pd.concat(
             [
-                post_detautomerized_smi_df.reset_index(drop=True),
-                df.reset_index(drop=True),
+                post_detautomerized_smi_df,
+                df,
             ],
             axis=1,
         )
         post_smi_df.drop(columns=post_smi_df.columns[[1]], inplace=True)
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         # Create format data
@@ -103,18 +113,28 @@ class NormalizationEngine:
             list(post_destereoisomerized.p_apply(lambda x: x[1])),
             columns=["diff"],
         )
+
+        post_destereoisomerized_smi_df.index = post_destereoisomerized.index
+        diff_after_destereoisomerized.index = post_destereoisomerized.index
         
         # Combine results
+        # post_smi_df = pd.concat(
+        #     [
+        #         post_destereoisomerized_smi_df.reset_index(drop=True),
+        #         df.reset_index(drop=True),
+        #     ],
+        #     axis=1,
+        # )
         post_smi_df = pd.concat(
             [
-                post_destereoisomerized_smi_df.reset_index(drop=True),
-                df.reset_index(drop=True),
+                post_destereoisomerized_smi_df,
+                df,
             ],
             axis=1,
         )
         post_smi_df.drop(columns=post_smi_df.columns[[1]], inplace=True)
         post_smi_df.rename(
-            columns={post_smi_df.columns[0]: "smiles"}, inplace=True
+            columns={post_smi_df.columns[0]: smi_col[0]}, inplace=True
         )
         
         # Create format data

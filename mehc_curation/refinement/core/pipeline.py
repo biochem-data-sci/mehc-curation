@@ -212,6 +212,7 @@ class RefinementPipeline:
                     partial_dup_cols=partial_dup_cols,
                 )
             )
+            rm_dup_2nd_format_data = {f"{k}_stage_2": v for k, v in rm_dup_2nd_format_data.items()}
             format_data.update(rm_dup_2nd_format_data)
             # self.smi_df = self.smi_df.reset_index(drop=True)
         
@@ -269,6 +270,7 @@ class RefinementPipeline:
                     partial_dup_cols=partial_dup_cols,
                 )
             )
+            rm_dup_3rd_format_data = {f"{k}_stage_3": v for k, v in rm_dup_3rd_format_data.items()}
             format_data.update(rm_dup_3rd_format_data)
             # self.smi_df = self.smi_df.reset_index(drop=True)
         

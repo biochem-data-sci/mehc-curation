@@ -68,7 +68,7 @@ class RefinementTemplateManager:
                 template_report += self.load_template("neutralization.txt")
             
             if rm_dup_after_2nd:
-                template_report += self.load_template("deduplicate.txt")
+                template_report += self.load_template("deduplicate_stage_2.txt")
         
         # Normalization stage
         if destereoisomerize or detautomerize:
@@ -81,7 +81,7 @@ class RefinementTemplateManager:
                 template_report += self.load_template("detautomerization.txt")
             
             if rm_dup_after_3rd:
-                template_report += self.load_template("deduplicate.txt")
+                template_report += self.load_template("deduplicate_stage_3.txt")
         
         # End section
         template_report += self.load_template("end.txt")

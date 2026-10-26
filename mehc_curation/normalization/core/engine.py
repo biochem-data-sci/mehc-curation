@@ -5,6 +5,7 @@ from typing import Tuple, Optional
 from ..config.normalization_config import NormalizationStepConfig
 from ..utils.normalization_utils import SMILESNormalizer
 from ...utils.common import parallel_apply
+from ...utils.mol_io import records_for
 
 
 class NormalizationEngine:
@@ -15,7 +16,8 @@ class NormalizationEngine:
     
     def run_detautomerize(self, df: pd.DataFrame, 
                          n_cpu: Optional[int] = -1, 
-                         split_factor: int = 1) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
+                         split_factor: int = 1,
+                         mol_cache: Optional[dict] = None) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Run detautomerization step.
         
@@ -23,6 +25,7 @@ class NormalizationEngine:
             df: Input DataFrame
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
+            mol_cache: Optional parsed-molecule cache shared between steps
             
         Returns:
             Tuple of (normalized_df, diff_df, format_data)
@@ -31,25 +34,30 @@ class NormalizationEngine:
         smi_col = df.columns.tolist()
         
         # Apply detautomerization
+        records = records_for(df[smi_col[0]], mol_cache, n_cpu, split_factor)
         post_detautomerized = parallel_apply(
-            df[smi_col[0]],
-            lambda x: SMILESNormalizer(x, return_difference=True).normalize_tautomer(),
+            records,
+            lambda x: SMILESNormalizer(x, return_difference=True).normalize_tautomer_record(),
             n_cpu,
             split_factor,
         )
         
         # Extract results
         post_detautomerized_smi_df = pd.DataFrame(
-            list(parallel_apply(post_detautomerized, lambda x: x[0], n_cpu, split_factor)),
+            [record.smi for record, _ in post_detautomerized],
             columns=["post_smiles"],
         )
         diff_after_detautomerized = pd.DataFrame(
-            list(parallel_apply(post_detautomerized, lambda x: x[1], n_cpu, split_factor)),
+            [diff for _, diff in post_detautomerized],
             columns=["diff"]
         )
 
         post_detautomerized_smi_df.index = post_detautomerized.index
         diff_after_detautomerized.index = post_detautomerized.index
+
+        if mol_cache is not None:
+            for idx, (record, _) in zip(post_detautomerized.index, post_detautomerized):
+                mol_cache[idx] = record
         
         # Combine results
         # post_smi_df = pd.concat(
@@ -84,7 +92,8 @@ class NormalizationEngine:
     
     def run_destereoisomerize(self, df: pd.DataFrame,
                               n_cpu: Optional[int] = -1, 
-                              split_factor: int = 1) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
+                              split_factor: int = 1,
+                              mol_cache: Optional[dict] = None) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Run destereoisomerization step.
         
@@ -92,6 +101,7 @@ class NormalizationEngine:
             df: Input DataFrame
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
+            mol_cache: Optional parsed-molecule cache shared between steps
             
         Returns:
             Tuple of (normalized_df, diff_df, format_data)
@@ -100,25 +110,30 @@ class NormalizationEngine:
         smi_col = df.columns.tolist()
         
         # Apply destereoisomerization
+        records = records_for(df[smi_col[0]], mol_cache, n_cpu, split_factor)
         post_destereoisomerized = parallel_apply(
-            df[smi_col[0]],
-            lambda x: SMILESNormalizer(x, return_difference=True).normalize_stereoisomer(),
+            records,
+            lambda x: SMILESNormalizer(x, return_difference=True).normalize_stereoisomer_record(),
             n_cpu,
             split_factor,
         )
         
         # Extract results
         post_destereoisomerized_smi_df = pd.DataFrame(
-            list(parallel_apply(post_destereoisomerized, lambda x: x[0], n_cpu, split_factor)),
+            [record.smi for record, _ in post_destereoisomerized],
             columns=["post_smiles"],
         )
         diff_after_destereoisomerized = pd.DataFrame(
-            list(parallel_apply(post_destereoisomerized, lambda x: x[1], n_cpu, split_factor)),
+            [diff for _, diff in post_destereoisomerized],
             columns=["diff"],
         )
 
         post_destereoisomerized_smi_df.index = post_destereoisomerized.index
         diff_after_destereoisomerized.index = post_destereoisomerized.index
+
+        if mol_cache is not None:
+            for idx, (record, _) in zip(post_destereoisomerized.index, post_destereoisomerized):
+                mol_cache[idx] = record
         
         # Combine results
         # post_smi_df = pd.concat(

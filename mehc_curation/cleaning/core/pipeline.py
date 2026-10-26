@@ -7,6 +7,7 @@ from .template_manager import CleaningTemplateManager
 from .output_manager import CleaningOutputManager
 from ..config.cleaning_config import CleaningConfig
 from ..utils.cleaning_utils import format_cleaning_return_values
+from ...utils.mol_io import prune
 
 
 class CleaningPipeline:
@@ -31,7 +32,8 @@ class CleaningPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Clean salts - exact replica of original method."""
         return self._run_cleaning_step(
@@ -50,7 +52,8 @@ class CleaningPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Neutralize SMILES - exact replica of original method."""
         return self._run_cleaning_step(
@@ -67,11 +70,13 @@ class CleaningPipeline:
         param_deduplicate: bool = True,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> pd.DataFrame:
         """Complete cleaning pipeline - exact replica of original method."""
         output_manager = CleaningOutputManager(output_dir)
         format_data = {}
+        mol_cache = _mol_cache if _mol_cache is not None else {}
         
         # Build initial template
         template_report = self.template_manager.build_complete_cleaning_template()
@@ -91,14 +96,15 @@ class CleaningPipeline:
         
         # Run salt cleaning
         self.smi_df, diff_after_cl_salt, _, cl_salt_format_data = self.engine.run_salt_cleaning(
-            self.smi_df, n_cpu=n_cpu, split_factor=split_factor
+            self.smi_df, n_cpu=n_cpu, split_factor=split_factor, mol_cache=mol_cache
         )
         format_data.update(cl_salt_format_data)
         template_report = self.template_manager.add_salt_cleaning_section(template_report)
         
         # Run neutralization
         self.smi_df, diff_after_neutralizing, neutralizing_format_data = self.engine.run_neutralization(
-            self.smi_df, neutralizing_method=neutralizing_method, n_cpu=n_cpu, split_factor=split_factor
+            self.smi_df, neutralizing_method=neutralizing_method, n_cpu=n_cpu,
+            split_factor=split_factor, mol_cache=mol_cache
         )
         format_data.update(neutralizing_format_data)
         template_report = self.template_manager.add_neutralization_section(template_report)
@@ -152,6 +158,7 @@ class CleaningPipeline:
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)
         partial_dup_cols = params.get('partial_dup_cols')
+        mol_cache = params.get('_mol_cache')
         
         # Setup managers
         output_manager = CleaningOutputManager(output_dir)
@@ -166,23 +173,26 @@ class CleaningPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validate_format_data)
         
         # Run main cleaning step
         if step_name == 'cl_salt':
             cleaned_smi, diff_data, missing_data, step_format_data = \
-                self.engine.run_salt_cleaning(self.smi_df, n_cpu, split_factor)
+                self.engine.run_salt_cleaning(self.smi_df, n_cpu, split_factor, mol_cache)
             format_data.update(step_format_data)
         elif step_name == 'neutralize':
             if neutralizing_method is None:
                 neutralizing_method = params.get('neutralizing_method', 'boyle')
             cleaned_smi, diff_data, step_format_data = \
-                self.engine.run_neutralization(self.smi_df, neutralizing_method, n_cpu, split_factor)
+                self.engine.run_neutralization(self.smi_df, neutralizing_method, n_cpu, split_factor, mol_cache)
             format_data.update(step_format_data)
             missing_data = None
         else:
             raise ValueError(f"Unknown cleaning step: {step_name}")
+        
+        prune(mol_cache, cleaned_smi.index)
         
         # Update internal state
         self.smi_df = cleaned_smi

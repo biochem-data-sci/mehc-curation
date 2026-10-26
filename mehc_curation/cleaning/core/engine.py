@@ -5,6 +5,7 @@ from typing import Tuple, Optional
 from ..config.cleaning_config import CleaningStepConfig
 from ..utils.cleaning_utils import SMILESCleaner
 from ...utils.common import parallel_apply
+from ...utils.mol_io import records_for
 
 
 class CleaningEngine:
@@ -15,7 +16,8 @@ class CleaningEngine:
     
     def run_salt_cleaning(self, df: pd.DataFrame, 
                          n_cpu: Optional[int] = -1, 
-                         split_factor: int = 1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
+                         split_factor: int = 1,
+                         mol_cache: Optional[dict] = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
         """
         Run salt cleaning step.
         
@@ -23,6 +25,7 @@ class CleaningEngine:
             df: Input DataFrame
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
+            mol_cache: Optional index -> MolRecord cache, updated in place
             
         Returns:
             Tuple of (cleaned_df, diff_df, missing_df, format_data)
@@ -30,64 +33,32 @@ class CleaningEngine:
         config = self.step_configs['cl_salt']
         smi_col = df.columns.tolist()
 
+        records = records_for(df[smi_col[0]], mol_cache, n_cpu, split_factor)
         salts_cleaned = parallel_apply(
-            df[smi_col[0]],
-            lambda x: SMILESCleaner(x, return_dif=True).clean_salt(
+            records,
+            lambda r: SMILESCleaner(r, return_dif=True).clean_salt_record(
                 return_is_null_smi=True
             ),
             n_cpu,
             split_factor,
         )
 
-        # salts_cleaned = df[smi_col[0]].p_apply(
-        #     lambda x: pd.Series(SMILESCleaner(x, return_dif=True).clean_salt(
-        #         return_is_null_smi=True
-        #     ))
-        # )
-        
         # Extract results
         post_salts_cl_smi_data = pd.DataFrame(
-            list(parallel_apply(salts_cleaned, lambda x: x[0], n_cpu, split_factor)),
-            columns=["post_smiles"]
+            {"post_smiles": [record.smi for record, _, _ in salts_cleaned]}
         )
         diff_after_cl_salt = pd.DataFrame(
-            list(parallel_apply(salts_cleaned, lambda x: x[1], n_cpu, split_factor)),
-            columns=["diff"]
+            {"diff": [diff for _, diff, _ in salts_cleaned]}
         )
         is_missing_smi_str = pd.DataFrame(
-            list(parallel_apply(salts_cleaned, lambda x: x[2], n_cpu, split_factor)),
-            columns=["is_missing"]
+            {"is_missing": [missing for _, _, missing in salts_cleaned]}
         )
-
-        # post_salts_cl_smi_data = pd.DataFrame(
-        #     list(salts_cleaned.p_apply(lambda x: x[0])),
-        #     columns=["post_smiles"],
-        #     index=df.index  # Preserve original index
-        # )
-        # diff_after_cl_salt = pd.DataFrame(
-        #     list(salts_cleaned.p_apply(lambda x: x[1])), columns=["diff"], 
-        #     index=df.index  # Preserve original index
-        # )
-        # is_missing_smi_str = pd.DataFrame(
-        #     list(salts_cleaned.p_apply(lambda x: x[2])), columns=["is_missing"], 
-        #     index=df.index  # Preserve original index
-        # )
 
         post_salts_cl_smi_data.index = salts_cleaned.index
         diff_after_cl_salt.index = salts_cleaned.index
         is_missing_smi_str.index = salts_cleaned.index
          
         # Combine results
-        # post_smi_df = pd.concat(
-        #     [
-        #         post_salts_cl_smi_data.reset_index(drop=True),
-        #         df.reset_index(drop=True),
-        #         diff_after_cl_salt.reset_index(drop=True),
-        #         is_missing_smi_str.reset_index(drop=True),
-        #     ],
-        #     axis=1,
-        # )
-
         post_smi_df = pd.concat(
             [
                 post_salts_cl_smi_data,
@@ -109,6 +80,11 @@ class CleaningEngine:
         
         missing_smiles_cnt = len(post_salts_cl_smi_data) - len(post_smi_df)
         
+        if mol_cache is not None:
+            for idx, (record, _, is_missing) in zip(salts_cleaned.index, salts_cleaned):
+                if not is_missing:
+                    mol_cache[idx] = record
+        
         # Create format data
         format_data = {
             config.format_keys['input']: len(df),
@@ -120,7 +96,8 @@ class CleaningEngine:
         return post_smi_df, diff_after_cl_salt, is_missing_smi_str, format_data
     
     def run_neutralization(self, df: pd.DataFrame, neutralizing_method: str = "boyle",
-                          n_cpu: Optional[int] = -1, split_factor: int = 1) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
+                          n_cpu: Optional[int] = -1, split_factor: int = 1,
+                          mol_cache: Optional[dict] = None) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Run neutralization step.
         
@@ -129,6 +106,7 @@ class CleaningEngine:
             method: Method to use - "boyle" or "rdkit"
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
+            mol_cache: Optional index -> MolRecord cache, updated in place
             
         Returns:
             Tuple of (cleaned_df, diff_df, format_data)
@@ -137,50 +115,26 @@ class CleaningEngine:
         smi_col = df.columns.tolist()
         
         # Apply neutralization
+        records = records_for(df[smi_col[0]], mol_cache, n_cpu, split_factor)
         neutralized = parallel_apply(
-            df[smi_col[0]],
-            lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(neutralizing_method=neutralizing_method),
+            records,
+            lambda r: SMILESCleaner(r, return_dif=True).neutralize_salt_record(neutralizing_method=neutralizing_method),
             n_cpu,
             split_factor,
         )
 
-        # neutralized = df[smi_col[0]].p_apply(
-        #     lambda x: pd.Series(SMILESCleaner(x, return_dif=True).neutralize_salt(method=method))
-        # )
-        
         # Extract results
         post_neutralized_smi_data = pd.DataFrame(
-            list(parallel_apply(neutralized, lambda x: x[0], n_cpu, split_factor)),
-            columns=["neutralized_smiles"],
+            {"neutralized_smiles": [record.smi for record, _ in neutralized]}
         )
         diff_after_neutralize = pd.DataFrame(
-            list(parallel_apply(neutralized, lambda x: x[1], n_cpu, split_factor)),
-            columns=["diff"]
+            {"diff": [diff for _, diff in neutralized]}
         )
-
-        # post_neutralized_smi_data = pd.DataFrame(
-        #     list(neutralized.p_apply(lambda x: x[0])),
-        #     columns=["neutralized_smiles"],
-        #     index=df.index  # Preserve original index
-        # )
-        # diff_after_neutralize = pd.DataFrame(
-        #     list(neutralized.p_apply(lambda x: x[1])), columns=["diff"],
-        #     index=df.index  # Preserve original index
-        # )
 
         post_neutralized_smi_data.index = neutralized.index
         diff_after_neutralize.index = neutralized.index
         
         # Combine results
-        # post_smi_df = pd.concat(
-        #     [
-        #         post_neutralized_smi_data.reset_index(drop=True),
-        #         df.reset_index(drop=True),
-        #         diff_after_neutralize.reset_index(drop=True),
-        #     ],
-        #     axis=1,
-        # )
-
         post_smi_df = pd.concat(
             [
                 post_neutralized_smi_data,
@@ -198,6 +152,11 @@ class CleaningEngine:
         )
         
         unprocessable_cnt = len(df) - len(post_smi_df)
+        
+        if mol_cache is not None:
+            for idx, (record, diff) in zip(neutralized.index, neutralized):
+                if pd.notna(diff):
+                    mol_cache[idx] = record
         
         # Create format data
         format_data = {

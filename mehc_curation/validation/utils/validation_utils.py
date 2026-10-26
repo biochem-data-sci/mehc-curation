@@ -1,8 +1,9 @@
 """Validation-specific utility functions."""
 import os
 import pandas as pd
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Union
 from ...utils.common import parallel_apply
+from ...utils.mol_io import MolRecord, parse, records_for, to_smiles
 from rdkit import Chem
 
 
@@ -11,25 +12,23 @@ class SMILESValidator:
     A class to analyze various properties of a SMILES string.
 
     Attributes:
+        record (MolRecord): The parsed molecule plus the string it came from.
         smi (str): The SMILES representation of a molecule.
     """
 
-    def __init__(self, smi: str):
+    def __init__(self, smi: Union[str, MolRecord]):
         """
-        Initialize the SMILESValidator class with a SMILES string.
+        Initialize the SMILESValidator class with a SMILES string or MolRecord.
 
         Args:
-            smi (str): The SMILES representation of a molecule.
+            smi: The SMILES representation of a molecule, or its parsed record.
         """
-        self.smi = smi
+        self.record = smi if isinstance(smi, MolRecord) else parse(smi)
+        self.smi = self.record.smi
 
     def is_valid(self):
         """Check if the SMILES string is valid and can be converted to a molecule."""
-        try:
-            mol = Chem.MolFromSmiles(self.smi)
-            return mol is not None
-        except Exception:
-            return False
+        return self.record.mol is not None
 
     def is_mixture(self):
         """Determine if the SMILES string represents a mixture."""
@@ -43,10 +42,10 @@ class SMILESValidator:
 
     def is_inorganic(self):
         """Check if the molecule represented by the SMILES string is inorganic."""
-        mol = Chem.MolFromSmiles(self.smi)
-        if mol is None:
+        if self.record.mol is None:
             return False
-        mol = Chem.rdmolops.AddHs(mol)
+        # AddHs returns a copy, so the cached molecule is not mutated
+        mol = Chem.rdmolops.AddHs(self.record.mol)
         for atom in mol.GetAtoms():
             if atom.GetSymbol() == "C":
                 return False
@@ -55,8 +54,8 @@ class SMILESValidator:
     def is_organometallic(self):
         """Check if the molecule represented by the SMILES string is organometallic."""
         from ...utils.io_utils import setup_data_dir
-        
-        mol = Chem.MolFromSmiles(self.smi)
+
+        mol = self.record.mol
         if mol is None:
             return False
         dat_dir = setup_data_dir()
@@ -70,7 +69,8 @@ class SMILESValidator:
 
 
 def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True,
-                               n_cpu: Optional[int] = -1, split_factor: int = 1) -> pd.DataFrame:
+                               n_cpu: Optional[int] = -1, split_factor: int = 1,
+                               records: Optional[pd.Series] = None) -> pd.DataFrame:
     """
     Apply SMILES normalization to the dataframe.
     
@@ -79,6 +79,7 @@ def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True,
         get_isomeric_smi: Whether to preserve stereochemistry
         n_cpu: Number of CPUs for parallel processing
         split_factor: Split factor for parallel processing
+        records: Pre-parsed MolRecord series for this column (parsed on the fly if omitted)
         
     Returns:
         DataFrame with normalized SMILES
@@ -86,22 +87,15 @@ def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True,
     smi_col = df.columns.tolist()
     df_copy = df.copy()
     
-    if get_isomeric_smi:
-        df_copy[smi_col[0]] = parallel_apply(
-            df_copy[smi_col[0]],
-            lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x)),
-            n_cpu,
-            split_factor,
-        )
-    else:
-        df_copy[smi_col[0]] = parallel_apply(
-            df_copy[smi_col[0]],
-            lambda x: Chem.MolToSmiles(
-                Chem.MolFromSmiles(x), isomericSmiles=False
-            ),
-            n_cpu,
-            split_factor,
-        )
+    if records is None:
+        records = records_for(df_copy[smi_col[0]], None, n_cpu, split_factor)
+
+    df_copy[smi_col[0]] = parallel_apply(
+        records,
+        lambda r: to_smiles(r.mol, get_isomeric_smi) if r.mol is not None else r.smi,
+        n_cpu,
+        split_factor,
+    ).to_numpy()
     
     return df_copy
 

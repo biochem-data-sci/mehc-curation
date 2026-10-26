@@ -4,6 +4,8 @@ from typing import Tuple, List, Dict, Any, Optional
 from rdkit import Chem
 from rdkit.Chem import SaltRemover
 
+from ...utils.mol_io import MolRecord, parse, to_smiles
+
 # Import rdMolStandardize - will be imported at function level to handle different RDKit versions
 
 
@@ -12,20 +14,52 @@ class SMILESCleaner:
     A class to clean SMILES strings (salt removal, neutralization).
     
     Attributes:
+        record (MolRecord): The molecule plus the exact input string.
         smi (str): The SMILES representation of a molecule.
         return_dif (bool): Whether to return difference information.
     """
     
-    def __init__(self, smi: str, return_dif: bool = False):
+    def __init__(self, smi, return_dif: bool = False):
         """
-        Initialize the SMILESCleaner class with a SMILES string.
+        Initialize the SMILESCleaner class with a SMILES string or a parsed record.
         
         Args:
-            smi (str): The SMILES representation of a molecule.
+            smi (str | MolRecord): The SMILES representation of a molecule.
             return_dif (bool): Whether to return difference information.
         """
-        self.smi = smi
+        self.record = smi if isinstance(smi, MolRecord) else parse(smi)
+        self.smi = self.record.smi
         self.return_dif = return_dif
+    
+    def clean_salt_record(self, return_is_null_smi: bool = False) -> Tuple[MolRecord, bool, bool]:
+        """
+        Remove salts, returning the cleaned molecule and the string it serializes to.
+        
+        Args:
+            return_is_null_smi: Whether to return if SMILES is null after cleaning
+            
+        Returns:
+            Tuple of (record, diff, is_missing)
+        """
+        try:
+            mol = self.record.mol
+            if mol is None:
+                return self.record, False, bool(return_is_null_smi)
+            
+            # Use RDKit's SaltRemover
+            remover = SaltRemover.SaltRemover()
+            cleaned_mol = remover.StripMol(mol, dontRemoveEverything=True)
+            
+            if cleaned_mol is None or cleaned_mol.GetNumAtoms() == 0:
+                return self.record, False, bool(return_is_null_smi)
+            
+            new_smi = to_smiles(cleaned_mol)
+            diff = (new_smi != self.record.smi)
+            is_missing = (new_smi == "") if return_is_null_smi else False
+            return MolRecord(cleaned_mol, new_smi), diff, is_missing
+            
+        except Exception:
+            return self.record, False, bool(return_is_null_smi)
     
     def clean_salt(self, return_is_null_smi: bool = False) -> Tuple[str, bool, bool]:
         """
@@ -40,52 +74,23 @@ class SMILESCleaner:
             - diff: True if salts were removed (changed), False otherwise
             - is_missing: True if SMILES is invalid/missing after cleaning
         """
-        try:
-            mol = Chem.MolFromSmiles(self.smi)
-            if mol is None:
-                if return_is_null_smi:
-                    return self.smi, False, True
-                return self.smi, False, False
-            
-            # Use RDKit's SaltRemover
-            remover = SaltRemover.SaltRemover()
-            cleaned_mol = remover.StripMol(mol, dontRemoveEverything=True)
-            
-            if cleaned_mol is None or cleaned_mol.GetNumAtoms() == 0:
-                if return_is_null_smi:
-                    return self.smi, False, True
-                return self.smi, False, False
-            
-            cleaned_smi = Chem.MolToSmiles(cleaned_mol)
-            diff = (cleaned_smi != self.smi)
-            
-            if return_is_null_smi:
-                is_missing = (cleaned_smi == "" or cleaned_smi is None)
-                return cleaned_smi, diff, is_missing
-            
-            return cleaned_smi, diff, False
-            
-        except Exception:
-            if return_is_null_smi:
-                return self.smi, False, True
-            return self.smi, False, False
+        record, diff, is_missing = self.clean_salt_record(return_is_null_smi)
+        return record.smi, diff, is_missing
     
-    def neutralize_salt(self, neutralizing_method: str = "boyle") -> Tuple[str, Optional[int]]:
+    def neutralize_salt_record(self, neutralizing_method: str = "boyle") -> Tuple[MolRecord, Optional[int]]:
         """
-        Neutralize SMILES string using specified method.
+        Neutralize a molecule, returning the neutralized molecule and its string.
         
         Args:
-            method: Method to use - "boyle" or "rdkit"
+            neutralizing_method: Method to use - "boyle" or "rdkit"
             
         Returns:
-            Tuple of (neutralized_smiles, diff)
-            - neutralized_smiles: SMILES after neutralization
-            - diff: 1 if neutralized (changed), 0 if not changed, None if error
+            Tuple of (record, diff); diff is None on error, as before.
         """
         try:
-            mol = Chem.MolFromSmiles(self.smi)
+            mol = self.record.mol
             if mol is None:
-                return self.smi, None
+                return self.record, None
             
             # Import rdMolStandardize at function level to handle different RDKit versions
             try:
@@ -101,23 +106,36 @@ class SMILESCleaner:
                     )
             
             if neutralizing_method == "boyle":
-                # Boyle method: simple charge neutralization
-                mol = SMILESCleaner._neutralize_atoms(mol)
-                neutralized_smi = Chem.MolToSmiles(mol)
+                # Boyle method: simple charge neutralization (copied: it edits in place)
+                new_mol = SMILESCleaner._neutralize_atoms(Chem.Mol(mol))
 
             elif neutralizing_method == "rdkit":
                 # RDKit standardizer
                 uncharger = rdMolStandardize.Uncharger()
-                mol = uncharger.uncharge(mol)
-                neutralized_smi = Chem.MolToSmiles(mol)
+                new_mol = uncharger.uncharge(mol)
             else:
                 raise ValueError(f"Unknown method: {neutralizing_method}. Must be 'boyle' or 'rdkit'")
             
-            diff = 1 if (neutralized_smi != self.smi) else 0
-            return neutralized_smi, diff
+            new_smi = to_smiles(new_mol)
+            return MolRecord(new_mol, new_smi), (1 if new_smi != self.record.smi else 0)
             
         except Exception:
-            return self.smi, None
+            return self.record, None
+
+    def neutralize_salt(self, neutralizing_method: str = "boyle") -> Tuple[str, Optional[int]]:
+        """
+        Neutralize SMILES string using specified method.
+        
+        Args:
+            method: Method to use - "boyle" or "rdkit"
+            
+        Returns:
+            Tuple of (neutralized_smiles, diff)
+            - neutralized_smiles: SMILES after neutralization
+            - diff: 1 if neutralized (changed), 0 if not changed, None if error
+        """
+        record, diff = self.neutralize_salt_record(neutralizing_method)
+        return record.smi, diff
 
     def _neutralize_atoms(mol):
         # Adapted in "No charge - A simple approach to neutralising charged molecules" by Boyle (2019)

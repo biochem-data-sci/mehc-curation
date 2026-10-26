@@ -7,6 +7,7 @@ from .template_manager import ValidationTemplateManager
 from .output_manager import ValidationOutputManager
 from ..config.validation_config import ValidationConfig
 from ..utils.validation_utils import format_return_values
+from ...utils.mol_io import MolRecord, prune
 
 
 class ValidationPipeline:
@@ -31,7 +32,8 @@ class ValidationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Validate SMILES - exact replica of original method."""
         return self._run_validation_step(
@@ -49,7 +51,8 @@ class ValidationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Remove mixtures - exact replica of original method."""
         return self._run_validation_step(
@@ -67,7 +70,8 @@ class ValidationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Remove inorganics - exact replica of original method."""
         return self._run_validation_step(
@@ -85,7 +89,8 @@ class ValidationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Remove organometallics - exact replica of original method."""
         return self._run_validation_step(
@@ -106,6 +111,7 @@ class ValidationPipeline:
         """Complete validation pipeline - exact replica of original method."""
         output_manager = ValidationOutputManager(output_dir)
         format_data = {}
+        mol_cache = {}
         
         # Build initial template
         template_report = self.template_manager.build_complete_validation_template()
@@ -119,6 +125,7 @@ class ValidationPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validation_format_data)
             template_report = self.template_manager.add_validation_section(template_report)
@@ -132,6 +139,7 @@ class ValidationPipeline:
             return_format_data=True,
             n_cpu=n_cpu,
             split_factor=split_factor,
+            _mol_cache=mol_cache,
         )
         format_data.update(rm_mixture_format_data)
         template_report = self.template_manager.add_mixture_section(template_report)
@@ -145,6 +153,7 @@ class ValidationPipeline:
             return_format_data=True,
             n_cpu=n_cpu,
             split_factor=split_factor,
+            _mol_cache=mol_cache,
         )
         format_data.update(rm_inorganic_format_data)
         template_report = self.template_manager.add_inorganic_section(template_report)
@@ -158,6 +167,7 @@ class ValidationPipeline:
             return_format_data=True,
             n_cpu=n_cpu,
             split_factor=split_factor,
+            _mol_cache=mol_cache,
         )
         format_data.update(rm_organometallic_format_data)
         template_report = self.template_manager.add_organometallic_section(template_report)  # FIXED TYPO
@@ -209,6 +219,10 @@ class ValidationPipeline:
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)
         partial_dup_cols = params.get('partial_dup_cols')
+        mol_cache = params.get('_mol_cache')
+        if mol_cache is None:
+            # standalone step: still share parses with its pre-validation
+            mol_cache = {}
         
         # Setup managers
         output_manager = ValidationOutputManager(output_dir)
@@ -222,18 +236,34 @@ class ValidationPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validate_format_data)
         
         # Run main validation
-        valid_smi, invalid_smi, idx_of_invalid_smi, step_format_data = \
-            self.engine.run_validation_step(self.smi_df, step_name, n_cpu, split_factor)
+        valid_smi, invalid_smi, idx_of_invalid_smi, step_format_data, valid_records = \
+            self.engine.run_validation_step(
+                self.smi_df, step_name, n_cpu, split_factor, mol_cache
+            )
         format_data.update(step_format_data)
         
         # Apply SMILES normalization (only for validate_smi)
         if step_name == 'validate_smi':
-            valid_smi = self.engine.normalize_smiles(valid_smi, get_isomeric_smi, n_cpu, split_factor)
-        
+            valid_smi = self.engine.normalize_smiles(
+                valid_smi, get_isomeric_smi, n_cpu, split_factor, valid_records
+            )
+            if mol_cache is not None:
+                if get_isomeric_smi:
+                    # the cached molecules now serialize to the normalized strings
+                    mol_cache.update({
+                        idx: MolRecord(record.mol, smi)
+                        for idx, record, smi in zip(
+                            valid_records.index, valid_records, valid_smi.iloc[:, 0]
+                        )
+                    })
+                else:
+                    # the column lost stereo while the molecules kept it: drop them
+                    mol_cache.clear()        
         # Build template
         template_report = self.template_manager.build_step_template(
             step_name, include_validation=validate_first
@@ -255,6 +285,8 @@ class ValidationPipeline:
             )
             format_data.update(deduplicate_format_data)
             template_report = self.template_manager.add_deduplication_template(template_report)
+        
+        prune(mol_cache, valid_smi.index)
         
         # Finalize template
         template_report = self.template_manager.finalize_template(template_report)

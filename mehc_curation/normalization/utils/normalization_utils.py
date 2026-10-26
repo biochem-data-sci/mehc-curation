@@ -1,7 +1,8 @@
 """Normalization-specific utility functions."""
 import pandas as pd
 from typing import Tuple, List, Dict, Any, Optional
-from rdkit import Chem
+
+from ...utils.mol_io import MolRecord, parse, to_smiles
 
 # Import rdMolStandardize - will be imported at function level to handle different RDKit versions
 
@@ -11,34 +12,36 @@ class SMILESNormalizer:
     A class to normalize SMILES strings (tautomer and stereoisomer normalization).
     
     Attributes:
+        record (MolRecord): The parsed molecule plus the string it was parsed from.
         smi (str): The SMILES representation of a molecule.
         return_difference (bool): Whether to return difference information.
     """
     
-    def __init__(self, smi: str, return_difference: bool = False):
+    def __init__(self, smi, return_difference: bool = False):
         """
-        Initialize the SMILESNormalizer class with a SMILES string.
+        Initialize the SMILESNormalizer class with a SMILES string or a parsed record.
         
         Args:
-            smi (str): The SMILES representation of a molecule.
+            smi (str | MolRecord): The SMILES representation of a molecule, or its record.
             return_difference (bool): Whether to return difference information.
         """
-        self.smi = smi
+        self.record = smi if isinstance(smi, MolRecord) else parse(smi)
+        self.smi = self.record.smi
         self.return_difference = return_difference
     
-    def normalize_tautomer(self) -> Tuple[str, bool]:
+    def normalize_tautomer_record(self) -> Tuple[MolRecord, bool]:
         """
-        Normalize tautomers in SMILES string.
+        Normalize tautomers, keeping the parsed molecule with the new SMILES.
         
         Returns:
-            Tuple of (normalized_smiles, diff)
-            - normalized_smiles: SMILES after tautomer normalization
+            Tuple of (record, diff)
+            - record: MolRecord holding the normalized molecule and SMILES
             - diff: True if normalized (changed), False otherwise
         """
         try:
-            mol = Chem.MolFromSmiles(self.smi)
+            mol = self.record.mol
             if mol is None:
-                return self.smi, False
+                return self.record, False
             
             # Import rdMolStandardize at function level
             try:
@@ -57,15 +60,51 @@ class SMILESNormalizer:
             normalized_mol = enumerator.Canonicalize(mol)
             
             if normalized_mol is None:
-                return self.smi, False
+                return self.record, False
             
-            normalized_smi = Chem.MolToSmiles(normalized_mol)
-            diff = (normalized_smi != self.smi)
+            normalized_smi = to_smiles(normalized_mol)
+            diff = (normalized_smi != self.record.smi)
             
-            return normalized_smi, diff
+            return MolRecord(normalized_mol, normalized_smi), diff
             
         except Exception:
-            return self.smi, False
+            return self.record, False
+    
+    def normalize_tautomer(self) -> Tuple[str, bool]:
+        """
+        Normalize tautomers in SMILES string.
+        
+        Returns:
+            Tuple of (normalized_smiles, diff)
+            - normalized_smiles: SMILES after tautomer normalization
+            - diff: True if normalized (changed), False otherwise
+        """
+        record, diff = self.normalize_tautomer_record()
+        return record.smi, diff
+    
+    def normalize_stereoisomer_record(self) -> Tuple[MolRecord, bool]:
+        """
+        Remove stereochemistry, keeping a record whose molecule is also stereo-free.
+        
+        Returns:
+            Tuple of (record, diff)
+            - record: MolRecord holding the normalized molecule and SMILES
+            - diff: True if normalized (changed), False otherwise
+        """
+        try:
+            mol = self.record.mol
+            if mol is None:
+                return self.record, False
+            
+            # Remove stereochemistry by converting to SMILES without isomeric information
+            normalized_smi = to_smiles(mol, isomeric=False)
+            diff = (normalized_smi != self.record.smi)
+            
+            # Re-parse so the record's molecule matches the non-isomeric string.
+            return MolRecord(parse(normalized_smi).mol, normalized_smi), diff
+            
+        except Exception:
+            return self.record, False
     
     def normalize_stereoisomer(self) -> Tuple[str, bool]:
         """
@@ -76,19 +115,8 @@ class SMILESNormalizer:
             - normalized_smiles: SMILES after stereoisomer normalization
             - diff: True if normalized (changed), False otherwise
         """
-        try:
-            mol = Chem.MolFromSmiles(self.smi)
-            if mol is None:
-                return self.smi, False
-            
-            # Remove stereochemistry by converting to SMILES without isomeric information
-            normalized_smi = Chem.MolToSmiles(mol, isomericSmiles=False)
-            diff = (normalized_smi != self.smi)
-            
-            return normalized_smi, diff
-            
-        except Exception:
-            return self.smi, False
+        record, diff = self.normalize_stereoisomer_record()
+        return record.smi, diff
 
 
 def extract_normalization_results(

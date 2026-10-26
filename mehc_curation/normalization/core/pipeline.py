@@ -7,6 +7,7 @@ from .template_manager import NormalizationTemplateManager
 from .output_manager import NormalizationOutputManager
 from ..config.normalization_config import NormalizationConfig
 from ..utils.normalization_utils import format_normalization_return_values
+from ...utils.mol_io import prune
 
 
 class NormalizationPipeline:
@@ -31,7 +32,8 @@ class NormalizationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Detautomerize SMILES - exact replica of original method."""
         return self._run_normalization_step(
@@ -49,7 +51,8 @@ class NormalizationPipeline:
         return_format_data: bool = False,
         n_cpu: int = -1,
         split_factor: int = None,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> Any:
         """Destereoisomerize SMILES - exact replica of original method."""
         return self._run_normalization_step(
@@ -65,11 +68,13 @@ class NormalizationPipeline:
         param_deduplicate: bool = True,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> pd.DataFrame:
         """Complete normalization pipeline - exact replica of original method."""
         output_manager = NormalizationOutputManager(output_dir)
         format_data = {}
+        mol_cache = {} if _mol_cache is None else _mol_cache
         
         # Build initial template
         template_report = self.template_manager.build_complete_normalization_template()
@@ -83,6 +88,7 @@ class NormalizationPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validation_format_data)
             template_report = self.template_manager.add_validation_section(template_report)
@@ -90,7 +96,7 @@ class NormalizationPipeline:
         # Run destereoisomerization first (important order!)
         self.smi_df, diff_after_destereoisomerized, destereoisomerized_format_data = \
             self.engine.run_destereoisomerize(
-                self.smi_df, n_cpu=n_cpu, split_factor=split_factor
+                self.smi_df, n_cpu=n_cpu, split_factor=split_factor, mol_cache=mol_cache
             )
         format_data.update(destereoisomerized_format_data)
         template_report = self.template_manager.add_destereoisomerization_section(template_report)
@@ -98,7 +104,7 @@ class NormalizationPipeline:
         # Run detautomerization
         self.smi_df, diff_after_detautomerized, detautomerized_format_data = \
             self.engine.run_detautomerize(
-                self.smi_df, n_cpu=n_cpu, split_factor=split_factor
+                self.smi_df, n_cpu=n_cpu, split_factor=split_factor, mol_cache=mol_cache
             )
         format_data.update(detautomerized_format_data)
         template_report = self.template_manager.add_detautomerization_section(template_report)
@@ -152,6 +158,7 @@ class NormalizationPipeline:
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)
         partial_dup_cols = params.get('partial_dup_cols')
+        mol_cache = params.get('_mol_cache')
         
         # Setup managers
         output_manager = NormalizationOutputManager(output_dir)
@@ -166,23 +173,29 @@ class NormalizationPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validate_format_data)
         
         # Run main normalization step
         if step_name == 'detautomerize':
             normalized_smi, diff_data, step_format_data = \
-                self.engine.run_detautomerize(self.smi_df, n_cpu, split_factor)
+                self.engine.run_detautomerize(
+                    self.smi_df, n_cpu, split_factor, mol_cache=mol_cache
+                )
             format_data.update(step_format_data)
         elif step_name == 'destereoisomerize':
             normalized_smi, diff_data, step_format_data = \
-                self.engine.run_destereoisomerize(self.smi_df, n_cpu, split_factor)
+                self.engine.run_destereoisomerize(
+                    self.smi_df, n_cpu, split_factor, mol_cache=mol_cache
+                )
             format_data.update(step_format_data)
         else:
             raise ValueError(f"Unknown normalization step: {step_name}")
         
         # Update internal state
         self.smi_df = normalized_smi
+        prune(mol_cache, normalized_smi.index)
         
         # Build template
         template_report = self.template_manager.build_step_template(

@@ -38,7 +38,8 @@ class RefinementPipeline:
         get_report: bool = False,
         n_cpu: int = -1,
         split_factor: int = 1,
-        partial_dup_cols: list = None
+        partial_dup_cols: list = None,
+        _mol_cache: dict = None
     ) -> pd.DataFrame:
         """
         Complete refinement pipeline - orchestrates validation, cleaning, and normalization stages.
@@ -66,6 +67,7 @@ class RefinementPipeline:
             pd.DataFrame: Refined SMILES DataFrame
         """
         from ...utils import deduplicate
+        from ...utils.mol_io import prune
         from ...validation import ValidationStage
         from ...cleaning import CleaningStage
         from ...normalization import NormalizationStage
@@ -85,6 +87,7 @@ class RefinementPipeline:
         data_post_2nd_stage_rm_dup = pd.DataFrame()
         data_post_3rd_stage_rm_dup = pd.DataFrame()
         format_data = {}
+        mol_cache = {} if _mol_cache is None else _mol_cache
         
         # Build template report
         template_report = self.template_manager.build_refinement_template(
@@ -111,6 +114,7 @@ class RefinementPipeline:
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(validate_beginning_format_data)
         
@@ -124,6 +128,7 @@ class RefinementPipeline:
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(rm_mixture_format_data)
         
@@ -137,6 +142,7 @@ class RefinementPipeline:
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(rm_inorganic_format_data)
         
@@ -150,6 +156,7 @@ class RefinementPipeline:
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(rm_organometallic_format_data)
         
@@ -168,6 +175,7 @@ class RefinementPipeline:
                 )
             )
             format_data.update(rm_dup_1st_format_data)
+            prune(mol_cache, self.smi_df.index)
             # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # ========== STAGE 2: CLEANING ==========
@@ -181,6 +189,7 @@ class RefinementPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(cl_salt_format_data)
         
@@ -195,6 +204,7 @@ class RefinementPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(neutralizing_format_data)
         
@@ -214,6 +224,7 @@ class RefinementPipeline:
             )
             rm_dup_2nd_format_data = {f"{k}_stage_2": v for k, v in rm_dup_2nd_format_data.items()}
             format_data.update(rm_dup_2nd_format_data)
+            prune(mol_cache, self.smi_df.index)
             # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # ========== STAGE 3: NORMALIZATION ==========
@@ -226,6 +237,7 @@ class RefinementPipeline:
                 param_deduplicate=False,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             # Note: format_data from post-neutralization validation is intentionally
             # not added to format_data as it's not part of the template
@@ -240,6 +252,7 @@ class RefinementPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(destereoisomerized_format_data)
         
@@ -253,6 +266,7 @@ class RefinementPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                _mol_cache=mol_cache,
             )
             format_data.update(detautomerized_format_data)
         
@@ -272,6 +286,7 @@ class RefinementPipeline:
             )
             rm_dup_3rd_format_data = {f"{k}_stage_3": v for k, v in rm_dup_3rd_format_data.items()}
             format_data.update(rm_dup_3rd_format_data)
+            prune(mol_cache, self.smi_df.index)
             # self.smi_df = self.smi_df.reset_index(drop=True)
         
         # Format the final report

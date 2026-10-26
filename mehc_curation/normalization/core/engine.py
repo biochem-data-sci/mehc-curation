@@ -3,10 +3,8 @@ import pandas as pd
 from typing import Tuple, Optional
 
 from ..config.normalization_config import NormalizationStepConfig
-from ..utils.normalization_utils import (
-    setup_parallel_processing,
-    SMILESNormalizer
-)
+from ..utils.normalization_utils import SMILESNormalizer
+from ...utils.common import parallel_apply
 
 
 class NormalizationEngine:
@@ -29,22 +27,25 @@ class NormalizationEngine:
         Returns:
             Tuple of (normalized_df, diff_df, format_data)
         """
-        setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs['detautomerize']
         smi_col = df.columns.tolist()
         
         # Apply detautomerization
-        post_detautomerized = df[smi_col[0]].p_apply(
-            lambda x: SMILESNormalizer(x, return_difference=True).normalize_tautomer()
+        post_detautomerized = parallel_apply(
+            df[smi_col[0]],
+            lambda x: SMILESNormalizer(x, return_difference=True).normalize_tautomer(),
+            n_cpu,
+            split_factor,
         )
         
         # Extract results
         post_detautomerized_smi_df = pd.DataFrame(
-            list(post_detautomerized.p_apply(lambda x: x[0])),
+            list(parallel_apply(post_detautomerized, lambda x: x[0], n_cpu, split_factor)),
             columns=["post_smiles"],
         )
         diff_after_detautomerized = pd.DataFrame(
-            list(post_detautomerized.p_apply(lambda x: x[1])), columns=["diff"]
+            list(parallel_apply(post_detautomerized, lambda x: x[1], n_cpu, split_factor)),
+            columns=["diff"]
         )
 
         post_detautomerized_smi_df.index = post_detautomerized.index
@@ -95,22 +96,24 @@ class NormalizationEngine:
         Returns:
             Tuple of (normalized_df, diff_df, format_data)
         """
-        setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs['destereoisomerize']
         smi_col = df.columns.tolist()
         
         # Apply destereoisomerization
-        post_destereoisomerized = df[smi_col[0]].p_apply(
-            lambda x: SMILESNormalizer(x, return_difference=True).normalize_stereoisomer()
+        post_destereoisomerized = parallel_apply(
+            df[smi_col[0]],
+            lambda x: SMILESNormalizer(x, return_difference=True).normalize_stereoisomer(),
+            n_cpu,
+            split_factor,
         )
         
         # Extract results
         post_destereoisomerized_smi_df = pd.DataFrame(
-            list(post_destereoisomerized.p_apply(lambda x: x[0])),
+            list(parallel_apply(post_destereoisomerized, lambda x: x[0], n_cpu, split_factor)),
             columns=["post_smiles"],
         )
         diff_after_destereoisomerized = pd.DataFrame(
-            list(post_destereoisomerized.p_apply(lambda x: x[1])),
+            list(parallel_apply(post_destereoisomerized, lambda x: x[1], n_cpu, split_factor)),
             columns=["diff"],
         )
 

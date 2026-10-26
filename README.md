@@ -149,7 +149,7 @@ refiner.complete_refinement(n_cpu=1)
 
 - Python >= 3.7
 - pandas >= 1.3.0
-- parallel-pandas >= 0.2.8
+- joblib >= 1.3
 - RDKit (install via conda: `conda install -c conda-forge rdkit`)
 
 ## License

@@ -2,7 +2,7 @@
 import os
 import pandas as pd
 from typing import Tuple, List, Dict, Any, Optional
-from parallel_pandas import ParallelPandas
+from ...utils.common import parallel_apply
 from rdkit import Chem
 
 
@@ -69,37 +69,16 @@ class SMILESValidator:
         return False  # FIXED: No metal-carbon bonds means NOT organometallic
 
 
-def setup_parallel_processing(n_cpu: Optional[int] = -1, split_factor: int = 1) -> None:
-    """Initialize parallel processing for validation operations."""
-    # Get available CPUs
-    available_cpus = os.cpu_count() or 1
-    
-    # Validate and adjust n_cpu
-    if n_cpu == -1:
-        # Use all available CPUs
-        n_cpu = available_cpus
-    elif n_cpu == 0:
-        # Set to 1 if user specified 0
-        n_cpu = 1
-    elif n_cpu < 0:
-        # Negative numbers (except -1) set to 1
-        n_cpu = 1
-    elif n_cpu > available_cpus:
-        # Cap at maximum available CPUs
-        n_cpu = available_cpus
-    
-    ParallelPandas.initialize(
-        n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
-    )
-
-
-def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True) -> pd.DataFrame:
+def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True,
+                               n_cpu: Optional[int] = -1, split_factor: int = 1) -> pd.DataFrame:
     """
     Apply SMILES normalization to the dataframe.
     
     Args:
         df: DataFrame with SMILES data
         get_isomeric_smi: Whether to preserve stereochemistry
+        n_cpu: Number of CPUs for parallel processing
+        split_factor: Split factor for parallel processing
         
     Returns:
         DataFrame with normalized SMILES
@@ -108,14 +87,20 @@ def apply_smiles_normalization(df: pd.DataFrame, get_isomeric_smi: bool = True) 
     df_copy = df.copy()
     
     if get_isomeric_smi:
-        df_copy[smi_col[0]] = df_copy[smi_col[0]].p_apply(
-            lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x))
+        df_copy[smi_col[0]] = parallel_apply(
+            df_copy[smi_col[0]],
+            lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x)),
+            n_cpu,
+            split_factor,
         )
     else:
-        df_copy[smi_col[0]] = df_copy[smi_col[0]].p_apply(
+        df_copy[smi_col[0]] = parallel_apply(
+            df_copy[smi_col[0]],
             lambda x: Chem.MolToSmiles(
                 Chem.MolFromSmiles(x), isomericSmiles=False
-            )
+            ),
+            n_cpu,
+            split_factor,
         )
     
     return df_copy

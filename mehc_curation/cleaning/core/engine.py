@@ -3,10 +3,8 @@ import pandas as pd
 from typing import Tuple, Optional
 
 from ..config.cleaning_config import CleaningStepConfig
-from ..utils.cleaning_utils import (
-    setup_parallel_processing,
-    SMILESCleaner
-)
+from ..utils.cleaning_utils import SMILESCleaner
+from ...utils.common import parallel_apply
 
 
 class CleaningEngine:
@@ -29,14 +27,16 @@ class CleaningEngine:
         Returns:
             Tuple of (cleaned_df, diff_df, missing_df, format_data)
         """
-        setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs['cl_salt']
         smi_col = df.columns.tolist()
 
-        salts_cleaned = df[smi_col[0]].p_apply(
+        salts_cleaned = parallel_apply(
+            df[smi_col[0]],
             lambda x: SMILESCleaner(x, return_dif=True).clean_salt(
                 return_is_null_smi=True
-            )
+            ),
+            n_cpu,
+            split_factor,
         )
 
         # salts_cleaned = df[smi_col[0]].p_apply(
@@ -47,14 +47,16 @@ class CleaningEngine:
         
         # Extract results
         post_salts_cl_smi_data = pd.DataFrame(
-            list(salts_cleaned.p_apply(lambda x: x[0])),
+            list(parallel_apply(salts_cleaned, lambda x: x[0], n_cpu, split_factor)),
             columns=["post_smiles"]
         )
         diff_after_cl_salt = pd.DataFrame(
-            list(salts_cleaned.p_apply(lambda x: x[1])), columns=["diff"]
+            list(parallel_apply(salts_cleaned, lambda x: x[1], n_cpu, split_factor)),
+            columns=["diff"]
         )
         is_missing_smi_str = pd.DataFrame(
-            list(salts_cleaned.p_apply(lambda x: x[2])), columns=["is_missing"]
+            list(parallel_apply(salts_cleaned, lambda x: x[2], n_cpu, split_factor)),
+            columns=["is_missing"]
         )
 
         # post_salts_cl_smi_data = pd.DataFrame(
@@ -131,13 +133,15 @@ class CleaningEngine:
         Returns:
             Tuple of (cleaned_df, diff_df, format_data)
         """
-        setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs['neutralize']
         smi_col = df.columns.tolist()
         
         # Apply neutralization
-        neutralized = df[smi_col[0]].p_apply(
-            lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(neutralizing_method=neutralizing_method)
+        neutralized = parallel_apply(
+            df[smi_col[0]],
+            lambda x: SMILESCleaner(x, return_dif=True).neutralize_salt(neutralizing_method=neutralizing_method),
+            n_cpu,
+            split_factor,
         )
 
         # neutralized = df[smi_col[0]].p_apply(
@@ -146,11 +150,12 @@ class CleaningEngine:
         
         # Extract results
         post_neutralized_smi_data = pd.DataFrame(
-            list(neutralized.p_apply(lambda x: x[0])),
+            list(parallel_apply(neutralized, lambda x: x[0], n_cpu, split_factor)),
             columns=["neutralized_smiles"],
         )
         diff_after_neutralize = pd.DataFrame(
-            list(neutralized.p_apply(lambda x: x[1])), columns=["diff"]
+            list(parallel_apply(neutralized, lambda x: x[1], n_cpu, split_factor)),
+            columns=["diff"]
         )
 
         # post_neutralized_smi_data = pd.DataFrame(

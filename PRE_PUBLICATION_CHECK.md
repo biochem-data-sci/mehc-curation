@@ -9,7 +9,7 @@
 - ✅ Package exports only Stage classes via `__all__`
 
 ### 2. Dependencies
-- ✅ `requirements.txt` includes pandas and parallel-pandas
+- ✅ `requirements.txt` includes pandas and joblib
 - ✅ RDKit properly documented (install via conda)
 - ✅ All imports verified
 

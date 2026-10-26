@@ -1,8 +1,6 @@
 """Normalization-specific utility functions."""
-import os
 import pandas as pd
 from typing import Tuple, List, Dict, Any, Optional
-from parallel_pandas import ParallelPandas
 from rdkit import Chem
 
 # Import rdMolStandardize - will be imported at function level to handle different RDKit versions
@@ -91,30 +89,6 @@ class SMILESNormalizer:
             
         except Exception:
             return self.smi, False
-
-
-def setup_parallel_processing(n_cpu: Optional[int] = -1, split_factor: int = 1) -> None:
-    """Initialize parallel processing for normalization operations."""
-    # Get available CPUs
-    available_cpus = os.cpu_count() or 1
-    
-    # Validate and adjust n_cpu
-    if n_cpu == -1:
-        # Use all available CPUs
-        n_cpu = available_cpus
-    elif n_cpu == 0:
-        # Set to 1 if user specified 0
-        n_cpu = 1
-    elif n_cpu < 0:
-        # Negative numbers (except -1) set to 1
-        n_cpu = 1
-    elif n_cpu > available_cpus:
-        # Cap at maximum available CPUs
-        n_cpu = available_cpus
-    
-    ParallelPandas.initialize(
-        n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True
-    )
 
 
 def extract_normalization_results(

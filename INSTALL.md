@@ -33,7 +33,7 @@ pip install rdkit-pypi
 
 ```bash
 # Make sure RDKit is installed first (see above)
-pip install -U mehc-curation==1.0.5
+pip install -U mehc-curation
 ```
 
 ### Option 2: Install from Source

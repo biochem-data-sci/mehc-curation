@@ -2,7 +2,46 @@
 import os
 import pandas as pd
 from typing import Dict, Any, Optional, List
-from parallel_pandas import ParallelPandas
+from joblib import Parallel, delayed
+
+
+def resolve_n_cpu(n_cpu=-1, split_factor=1):
+    """Normalise the public n_cpu/split_factor pair.
+
+    ``-1``/``None`` mean all available CPUs, ``0`` and other negatives mean 1,
+    and values above the core count are capped.
+    """
+    available = os.cpu_count() or 1
+    if n_cpu is None or n_cpu == -1:
+        n_cpu = available
+    elif n_cpu <= 0:
+        n_cpu = 1
+    n_cpu = min(n_cpu, available)
+    split_factor = 1 if split_factor is None else max(1, int(split_factor))
+    return n_cpu, split_factor
+
+
+def _apply_chunk(chunk, func):
+    return chunk.apply(func)
+
+
+def parallel_apply(series, func, n_cpu=-1, split_factor=1):
+    """Series.apply over `min(len(series), n_cpu * split_factor)` contiguous chunks."""
+    n_cpu, split_factor = resolve_n_cpu(n_cpu, split_factor)
+    if len(series) == 0:
+        return series.copy()
+    if n_cpu == 1:
+        return series.apply(func)
+
+    n_chunks = min(len(series), n_cpu * split_factor)
+    chunk_size = -(-len(series) // n_chunks)  # ceil
+    chunks = [series.iloc[i:i + chunk_size] for i in range(0, len(series), chunk_size)]
+    results = Parallel(n_jobs=n_cpu, backend="loky")(
+        delayed(_apply_chunk)(chunk, func) for chunk in chunks
+    )
+    out = pd.concat(results)
+    out.index = series.index  # also raises if a chunk lost rows
+    return out
 
 
 def deduplicate(
@@ -38,26 +77,9 @@ def deduplicate(
         pd.DataFrame: Cleaned DataFrame with duplicates removed, and optionally other outputs based on flags.
     """
     
-    # Initialize parallel processing
-    # Get available CPUs
-    available_cpus = os.cpu_count() or 1
-    
-    # Validate and adjust n_cpu
-    if n_cpu == -1:
-        # Use all available CPUs
-        n_cpu = available_cpus
-    elif n_cpu == 0:
-        # Set to 1 if user specified 0
-        n_cpu = 1
-    elif n_cpu < 0:
-        # Negative numbers (except -1) set to 1
-        n_cpu = 1
-    elif n_cpu > available_cpus:
-        # Cap at maximum available CPUs
-        n_cpu = available_cpus
-    
-    ParallelPandas.initialize(n_cpu=n_cpu, split_factor=split_factor, disable_pr_bar=True)
-    
+    # Normalise n_cpu/split_factor
+    n_cpu, split_factor = resolve_n_cpu(n_cpu, split_factor)
+
     get_output = output_dir is not None
     report_root = os.path.abspath(output_dir) if output_dir else os.getcwd()
     if get_output or get_report:
@@ -122,8 +144,11 @@ def deduplicate(
     
     # Create index mapping for duplicates
     index_mapping = (
-        smi_df.groupby(smi_col[0])
-        .p_apply(lambda x: list(x.index))
+        pd.DataFrame(
+            {smi_col[0]: smi_df[smi_col[0]].to_numpy(), "idx": smi_df.index.to_numpy()}
+        )
+        .groupby(smi_col[0])["idx"]
+        .apply(list)
         .reset_index(name="indexes")
     )
 

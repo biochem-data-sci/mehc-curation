@@ -4,11 +4,11 @@ from typing import Tuple, List, Dict, Optional
 
 from ..config.validation_config import ValidationStepConfig
 from ..utils.validation_utils import (
-    setup_parallel_processing,
     apply_smiles_normalization,
     extract_validation_results,
     SMILESValidator  # FIXED: Import from validation utils
 )
+from ...utils.common import parallel_apply
 
 
 class ValidationEngine:
@@ -32,14 +32,16 @@ class ValidationEngine:
         Returns:
             Tuple of (valid_df, invalid_series, invalid_indices, format_data)
         """        
-        setup_parallel_processing(n_cpu, split_factor)
         config = self.step_configs[step_name]
         smi_col = df.columns.tolist()
         
         # Apply validation method
         df_copy = df.copy()
-        df_copy["is_valid"] = df_copy[smi_col[0]].p_apply(
-            lambda x: getattr(SMILESValidator(x), config.validation_method)()
+        df_copy["is_valid"] = parallel_apply(
+            df_copy[smi_col[0]],
+            lambda x: getattr(SMILESValidator(x), config.validation_method)(),
+            n_cpu,
+            split_factor,
         )
         
         # Extract results
@@ -48,5 +50,4 @@ class ValidationEngine:
     def normalize_smiles(self, df: pd.DataFrame, get_isomeric_smi: bool = True,
                         n_cpu: Optional[int] = -1, split_factor: int = 1) -> pd.DataFrame:
         """Apply SMILES normalization."""
-        setup_parallel_processing(n_cpu, split_factor)
-        return apply_smiles_normalization(df, get_isomeric_smi)
+        return apply_smiles_normalization(df, get_isomeric_smi, n_cpu, split_factor)

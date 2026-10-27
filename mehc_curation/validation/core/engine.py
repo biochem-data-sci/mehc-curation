@@ -9,7 +9,7 @@ from ..utils.validation_utils import (
     SMILESValidator  # FIXED: Import from validation utils
 )
 from ...utils.common import parallel_apply
-from ...utils.mol_io import records_for
+from ...utils.mol_io import parse_series, records_for
 
 
 class ValidationEngine:
@@ -41,7 +41,13 @@ class ValidationEngine:
         
         # Apply validation method
         df_copy = df.copy()
-        records = records_for(df_copy[smi_col[0]], mol_cache, n_cpu, split_factor)
+        # Validation is the trust boundary: when it judges validity, the string
+        # itself must parse, so the cache is bypassed for that step only (a
+        # cached Mol can serialize to a string RDKit cannot read back).
+        if config.validation_method == "is_valid":
+            records = parse_series(df_copy[smi_col[0]], n_cpu, split_factor)
+        else:
+            records = records_for(df_copy[smi_col[0]], mol_cache, n_cpu, split_factor)
         df_copy["is_valid"] = parallel_apply(
             records,
             lambda record: getattr(SMILESValidator(record), config.validation_method)(),

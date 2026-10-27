@@ -4,7 +4,45 @@ from typing import Tuple, List, Dict, Any, Optional
 
 from ...utils.mol_io import MolRecord, parse, to_smiles
 
-# Import rdMolStandardize - will be imported at function level to handle different RDKit versions
+# Tautomer enumerators are reused within a worker process: building one costs
+# ~0.7 ms per row, and one chunk runs per worker at a time.
+_ENUMERATORS: Dict[int, Any] = {}
+_STANDARDIZE = None
+
+
+def _standardize():
+    """Import rdMolStandardize once per process (handles older RDKit layouts)."""
+    global _STANDARDIZE
+    if _STANDARDIZE is None:
+        try:
+            from rdkit.Chem.MolStandardize import rdMolStandardize
+        except ImportError:
+            try:
+                from rdkit.Chem import rdMolStandardize
+            except ImportError:
+                raise ImportError(
+                    "rdMolStandardize not found. Please ensure RDKit is properly installed. "
+                    "Try: conda install -c conda-forge rdkit"
+                )
+        _STANDARDIZE = rdMolStandardize
+    return _STANDARDIZE
+
+
+def tautomer_enumerator(max_tautomers: Optional[int] = None):
+    """Enumerator for a given tautomer cap, built once per worker process.
+
+    ``max_tautomers=None`` keeps RDKit's default (1000). A lower cap bounds
+    enumeration time, at the cost of a possibly different canonical tautomer
+    for molecules that exceed it.
+    """
+    key = 1000 if max_tautomers is None else int(max_tautomers)
+    enumerator = _ENUMERATORS.get(key)
+    if enumerator is None:
+        enumerator = _standardize().TautomerEnumerator()
+        if max_tautomers is not None:
+            enumerator.SetMaxTautomers(key)
+        _ENUMERATORS[key] = enumerator
+    return enumerator
 
 
 class SMILESNormalizer:
@@ -17,17 +55,23 @@ class SMILESNormalizer:
         return_difference (bool): Whether to return difference information.
     """
     
-    def __init__(self, smi, return_difference: bool = False):
+    def __init__(self, smi, return_difference: bool = False,
+                 max_tautomers: Optional[int] = None):
         """
         Initialize the SMILESNormalizer class with a SMILES string or a parsed record.
         
         Args:
             smi (str | MolRecord): The SMILES representation of a molecule, or its record.
             return_difference (bool): Whether to return difference information.
+            max_tautomers (int): Cap on enumerated tautomers; None keeps RDKit's
+                1000. Lower values can change the result for molecules above the cap.
         """
+        if max_tautomers is not None and int(max_tautomers) < 1:
+            raise ValueError(f"max_tautomers must be a positive integer, got {max_tautomers}")
         self.record = smi if isinstance(smi, MolRecord) else parse(smi)
         self.smi = self.record.smi
         self.return_difference = return_difference
+        self.max_tautomers = max_tautomers
     
     def normalize_tautomer_record(self) -> Tuple[MolRecord, bool]:
         """
@@ -43,20 +87,8 @@ class SMILESNormalizer:
             if mol is None:
                 return self.record, False
             
-            # Import rdMolStandardize at function level
-            try:
-                from rdkit.Chem.MolStandardize import rdMolStandardize
-            except ImportError:
-                try:
-                    from rdkit.Chem import rdMolStandardize
-                except ImportError:
-                    raise ImportError(
-                        "rdMolStandardize not found. Please ensure RDKit is properly installed. "
-                        "Try: conda install -c conda-forge rdkit"
-                    )
-            
-            # Use RDKit's TautomerEnumerator
-            enumerator = rdMolStandardize.TautomerEnumerator()
+            # Enumerator is reused per worker; the cap bounds its enumeration
+            enumerator = tautomer_enumerator(self.max_tautomers)
             normalized_mol = enumerator.Canonicalize(mol)
             
             if normalized_mol is None:

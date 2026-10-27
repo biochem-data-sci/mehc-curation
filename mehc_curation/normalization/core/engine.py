@@ -17,7 +17,8 @@ class NormalizationEngine:
     def run_detautomerize(self, df: pd.DataFrame, 
                          n_cpu: Optional[int] = -1, 
                          split_factor: int = 1,
-                         mol_cache: Optional[dict] = None) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
+                         mol_cache: Optional[dict] = None,
+                         max_tautomers: Optional[int] = None) -> Tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Run detautomerization step.
         
@@ -26,6 +27,7 @@ class NormalizationEngine:
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
             mol_cache: Optional parsed-molecule cache shared between steps
+            max_tautomers: Cap on enumerated tautomers (None keeps RDKit's 1000)
             
         Returns:
             Tuple of (normalized_df, diff_df, format_data)
@@ -37,7 +39,9 @@ class NormalizationEngine:
         records = records_for(df[smi_col[0]], mol_cache, n_cpu, split_factor)
         post_detautomerized = parallel_apply(
             records,
-            lambda x: SMILESNormalizer(x, return_difference=True).normalize_tautomer_record(),
+            lambda x: SMILESNormalizer(
+                x, return_difference=True, max_tautomers=max_tautomers
+            ).normalize_tautomer_record(),
             n_cpu,
             split_factor,
         )

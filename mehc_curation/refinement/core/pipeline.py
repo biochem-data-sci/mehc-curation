@@ -37,8 +37,9 @@ class RefinementPipeline:
         print_logs: bool = True,
         get_report: bool = False,
         n_cpu: int = -1,
-        split_factor: int = 1,
+        split_factor: int = 32,
         partial_dup_cols: list = None,
+        max_tautomers: int = None,
         _mol_cache: dict = None
     ) -> pd.DataFrame:
         """
@@ -62,6 +63,7 @@ class RefinementPipeline:
             n_cpu: Number of CPUs for parallel processing
             split_factor: Split factor for parallel processing
             partial_dup_cols: Columns to consider for partial duplicates
+            max_tautomers: Cap on enumerated tautomers (None keeps RDKit's 1000)
             
         Returns:
             pd.DataFrame: Refined SMILES DataFrame
@@ -266,6 +268,7 @@ class RefinementPipeline:
                 return_format_data=True,
                 n_cpu=n_cpu,
                 split_factor=split_factor,
+                max_tautomers=max_tautomers,
                 _mol_cache=mol_cache,
             )
             format_data.update(detautomerized_format_data)

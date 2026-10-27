@@ -118,8 +118,18 @@ def main():
         "--split_factor",
         required=False,
         type=int,
-        default=1,
-        help="Split factor (optional)",
+        default=32,
+        help="Chunks per CPU for parallel processing "
+        "(optional, default is 32; lower it only if per-chunk overhead matters more than load balance)",
+    )
+    parser.add_argument(
+        "--max_tautomers",
+        required=False,
+        type=int,
+        default=None,
+        help="Cap on enumerated tautomers per molecule (optional, default is "
+        "RDKit's 1000). Lower values bound runtime on pathological molecules "
+        "but can change the canonical tautomer for molecules above the cap",
     )
     
     try:
@@ -160,6 +170,7 @@ def main():
             "get_report": args.get_report,
             "n_cpu": args.n_cpu,
             "split_factor": args.split_factor,
+            "max_tautomers": args.max_tautomers,
         }
 
         output = refining.complete_refinement(**param_dict)

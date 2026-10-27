@@ -31,8 +31,9 @@ class NormalizationPipeline:
         param_deduplicate: bool = True,
         return_format_data: bool = False,
         n_cpu: int = -1,
-        split_factor: int = 1,
+        split_factor: int = 32,
         partial_dup_cols: list = None,
+        max_tautomers: int = None,
         _mol_cache: dict = None
     ) -> Any:
         """Detautomerize SMILES - exact replica of original method."""
@@ -67,8 +68,9 @@ class NormalizationPipeline:
         get_report: bool = False,
         param_deduplicate: bool = True,
         n_cpu: int = -1,
-        split_factor: int = 1,
+        split_factor: int = 32,
         partial_dup_cols: list = None,
+        max_tautomers: int = None,
         _mol_cache: dict = None
     ) -> pd.DataFrame:
         """Complete normalization pipeline - exact replica of original method."""
@@ -104,7 +106,8 @@ class NormalizationPipeline:
         # Run detautomerization
         self.smi_df, diff_after_detautomerized, detautomerized_format_data = \
             self.engine.run_detautomerize(
-                self.smi_df, n_cpu=n_cpu, split_factor=split_factor, mol_cache=mol_cache
+                self.smi_df, n_cpu=n_cpu, split_factor=split_factor,
+                mol_cache=mol_cache, max_tautomers=max_tautomers
             )
         format_data.update(detautomerized_format_data)
         template_report = self.template_manager.add_detautomerization_section(template_report)
@@ -158,6 +161,7 @@ class NormalizationPipeline:
         n_cpu = params.get('n_cpu')
         split_factor = params.get('split_factor', 1)
         partial_dup_cols = params.get('partial_dup_cols')
+        max_tautomers = params.get('max_tautomers')
         mol_cache = params.get('_mol_cache')
         
         # Setup managers
@@ -181,7 +185,8 @@ class NormalizationPipeline:
         if step_name == 'detautomerize':
             normalized_smi, diff_data, step_format_data = \
                 self.engine.run_detautomerize(
-                    self.smi_df, n_cpu, split_factor, mol_cache=mol_cache
+                    self.smi_df, n_cpu, split_factor, mol_cache=mol_cache,
+                    max_tautomers=max_tautomers
                 )
             format_data.update(step_format_data)
         elif step_name == 'destereoisomerize':

@@ -51,8 +51,15 @@ def main():
         help="Number of CPUs to use (-1 for all CPUs, optional)",
     )
     parser.add_argument(
-        "--split_factor", required=False, type=int, default=1,
-        help="Split factor (optional)",
+        "--split_factor", required=False, type=int, default=32,
+        help="Chunks per CPU for parallel processing "
+        "(optional, default is 32; lower it only if per-chunk overhead matters more than load balance)",
+    )
+    parser.add_argument(
+        "--max_tautomers", required=False, type=int, default=None,
+        help="Cap on enumerated tautomers per molecule (optional, default is "
+        "RDKit's 1000). Lower values bound runtime on pathological molecules "
+        "but can change the canonical tautomer for molecules above the cap",
     )
     
     try:
@@ -96,9 +103,13 @@ def main():
                     "WARNING: You should destereoisomerize SMILES "
                     "before detautomerize for sure for the good output."
                 )
-                output = normalizing.detautomerize(**param_dict)
+                output = normalizing.detautomerize(
+                    **param_dict, max_tautomers=args.max_tautomers
+                )
             case 3:
-                output = normalizing.complete_normalization(**param_dict)
+                output = normalizing.complete_normalization(
+                    **param_dict, max_tautomers=args.max_tautomers
+                )
         
         print("Your action is done!")
         
